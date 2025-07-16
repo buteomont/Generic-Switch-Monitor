@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head><title>Settings</title></head>
+<body>
+  <h1>Device Settings</h1>
+  <form action="/save" method="POST">
+    <table>
+      <tr><td>SSID:         </td><td><input name="ssid         " value="%ssid%" /></td></tr>
+      <tr><td>WiFi Password:</td><td><input name="wifipass     " value="%wifipass%" /></td></tr>
+      <tr><td>broker:       </td><td><input name="broker       " value="%broker%" /></td></tr>
+      <tr><td>port:         </td><td><input name="port         " value="%port%" /></td></tr>
+      <tr><td>topicroot:    </td><td><input name="topicroot    " value="%topicroot%" /></td></tr>
+      <tr><td>user:         </td><td><input name="user         " value="%user%" /></td></tr>
+      <tr><td>pass:         </td><td><input name="pass         " value="%pass%" /></td></tr>
+      <tr><td>ssid:         </td><td><input name="ssid         " value="%ssid%" /></td></tr>
+      <tr><td>wifipass:     </td><td><input name="wifipass     " value="%wifipass%" /></td></tr>
+      <tr><td>address:      </td><td><input name="address      " value="%address%" /></td></tr>
+      <tr><td>netmask:      </td><td><input name="netmask      " value="%netmask%" /></td></tr>
+      <tr><td>debug:        </td><td><input name="debug        " value="%debug%" /></td></tr>
+      <tr><td>checkinterval:</td><td><input name="checkinterval" value="%checkinterval%" /></td></tr>
+      <tr><td colspan=2 align="center"><button type="submit">Save</button></td></tr>
+      </table>
+    </form>
+  </body>
+</html>
