@@ -2,23 +2,33 @@
 <html>
 <head><title>Settings</title></head>
 <body>
-  <h1>Device Settings</h1>
+  <h1>Switch Monitor Device Settings</h1>
   <form action="/save" method="POST">
+    <h2>WiFi and Network</h2>
     <table>
-      <tr><td>SSID:         </td><td><input name="ssid         " value="%ssid%" /></td></tr>
-      <tr><td>WiFi Password:</td><td><input name="wifipass     " value="%wifipass%" /></td></tr>
-      <tr><td>broker:       </td><td><input name="broker       " value="%broker%" /></td></tr>
-      <tr><td>port:         </td><td><input name="port         " value="%port%" /></td></tr>
-      <tr><td>topicroot:    </td><td><input name="topicroot    " value="%topicroot%" /></td></tr>
-      <tr><td>user:         </td><td><input name="user         " value="%user%" /></td></tr>
-      <tr><td>pass:         </td><td><input name="pass         " value="%pass%" /></td></tr>
-      <tr><td>ssid:         </td><td><input name="ssid         " value="%ssid%" /></td></tr>
-      <tr><td>wifipass:     </td><td><input name="wifipass     " value="%wifipass%" /></td></tr>
-      <tr><td>address:      </td><td><input name="address      " value="%address%" /></td></tr>
-      <tr><td>netmask:      </td><td><input name="netmask      " value="%netmask%" /></td></tr>
-      <tr><td>debug:        </td><td><input name="debug        " value="%debug%" /></td></tr>
-      <tr><td>checkinterval:</td><td><input name="checkinterval" value="%checkinterval%" /></td></tr>
-      <tr><td colspan=2 align="center"><button type="submit">Save</button></td></tr>
+      <tr><td>SSID:          </td><td><input name="ssid"          value="%ssid%" onchange="document.getElementById('saveButton').disabled = false;" />    </td><td>The router to which you want to connect          </td></tr>
+      <tr><td>WiFi Password: </td><td><input name="wifipass"      value="%wifipass%" onchange="document.getElementById('saveButton').disabled = false;" /></td><td>The password to the router                       </td></tr>
+      <tr><td>Static Address:</td><td><input name="address"       value="%address%" onchange="document.getElementById('saveButton').disabled = false;" /> </td><td>Optional. Will use DHCP if empty.                </td></tr>
+      <tr><td>Netmask:       </td><td><input name="netmask"       value="%netmask%" onchange="document.getElementById('saveButton').disabled = false;" /> </td><td>Optional. Only needed if static address is used. </td></tr>
+      </table>
+
+    <h2>MQTT</h2>
+    <table>
+      <tr><td>Broker:    </td><td><input name="broker"        value="%broker%" onchange="document.getElementById('saveButton').disabled = false;" />   </td><td>The MQTT broker to which to send the reports.    </td></tr>
+      <tr><td>Port:      </td><td><input name="port"          value="%port%" onchange="document.getElementById('saveButton').disabled = false;" />     </td><td>The port of the MQTT broker (usually 1883).      </td></tr>
+      <tr><td>Topic Root:</td><td><input name="topicroot"     value="%topicroot%" onchange="document.getElementById('saveButton').disabled = false;" /></td><td>The root of the MQTT topic. Must end with /.     </td></tr>
+      <tr><td>User:      </td><td><input name="user"          value="%user%" onchange="document.getElementById('saveButton').disabled = false;" />     </td><td>This is the userid for MQTT. Leave blank if none.</td></tr>
+      <tr><td>Password:  </td><td><input name="pass"          value="%pass%" onchange="document.getElementById('saveButton').disabled = false;" />     </td><td>The password for the above user.                 </td></tr>
+      </table>
+
+    <h2>Controls</h2>
+    <table>
+      <tr><td>Debug Flag:    </td><td><input type="checkbox" name="debug" value="1" %debugChecked% onchange="document.getElementById('saveButton').disabled = false;" /></td><td>If checked, prints diagnostic info to the serial port.</td></tr>
+      <tr><td>Report Interval:</td><td><input name="reportinterval" value="%reportinterval%" onchange="document.getElementById('saveButton').disabled = false;" />     </td><td>How often in seconds to issue a status report. Processor will sleep between checks.</td></tr>
+      <tr><td>Switch Port:</td><td><input name="switchport" value="%switchport%" onchange="document.getElementById('saveButton').disabled = false;" />     </td><td>The port number that is being monitored</td></tr>
+      <tr><td>Active Low:    </td><td><input type="checkbox" name="activelow" value="1" %activeLowChecked% onchange="document.getElementById('saveButton').disabled = false;" /></td><td>If checked, switchPort will trigger when pulled low instead of high.</td></tr>
+      <tr><td colspan=3>&nbsp;</td></tr>
+      <tr><td colspan=2 align="center"><button id="saveButton" type="submit" disabled>Save</button></td><td><font color="green">%message%</font></td></tr>
       </table>
     </form>
   </body>

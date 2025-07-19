@@ -1,5 +1,11 @@
 /* A simple, generic program to monitor a switch and report its status via MQTT when it changes.
  * 
+ * This processor will sleep until one of two things occur:
+ *  1. The processor is reset by momentarily pulling the reset pin low.
+ *  2. The number of seconds in reportInterval has passed since the last wakeup.
+ * When it wakes, it will connect to the specified router, subscribe to the command
+ * topic (<topicRoot/command>) on the specified broker, and publish a set of values.
+ * 
  * Configuration is done via serial connection, web page, or MQTT topic.  Enter:
  *  broker=<broker name or address>
  *  port=<port number>   (defaults to 1883)
@@ -8,12 +14,15 @@
  *  user=<mqtt user>
  *  pass=<mqtt password>
  *  ssid=<wifi ssid>
- *  wifipass=<wifi password>
+ *  wifipass=<wifi password>  
+ *  reportinterval=<seconds>; //How long to wait between status reports
+ *  switchPort=<GPIO number>; // GPIO port to which the monitored switch is connected
+
  * 
  * Once connected to an MQTT broker, configuration can be done similarly via the 
  * <topicroot>/command topic. Because this program sleeps most of the time, you will need
- * to send a <topicroot>/command with the RETAIN bit set and a message of "checkinterval=0"
- * to keep it awake while you make changes. Reset the checkinterval when you are finished
+ * to send a <topicroot>/command with the RETAIN bit set and a message of "reportinterval=0"
+ * to keep it awake while you make changes. Reset the reportinterval when you are finished
  * and don't forget to remove the retained MQTT message.
  * 
  * NOTE: to upload a new web page from LittleFS, use "pio run --target uploadfs" in a 
@@ -57,8 +66,9 @@ typedef struct
   bool debug=true;
   char address[ADDRESS_SIZE]=""; //static address for this device
   char netmask[ADDRESS_SIZE]=""; //size of network
-  uint16_t checkInterval=DEFAULT_CHECK_INTERVAL; //How long to wait between checks
+  uint16_t reportInterval=DEFAULT_CHECK_INTERVAL; //How long to wait between checks
   uint8_t switchPort=0; // GPIO port to which the monitored switch is connected
+  bool activeLow=true; //It is considered triggered when switchport is low if this is checked. Hight otherwise.
   } conf;
 conf settings; //all settings in one struct makes it easier to store in EEPROM
 boolean settingsAreValid=false;
@@ -70,21 +80,32 @@ boolean rssiShowing=false; //used to redraw the RSSI indicator after clearing di
 String lastMessage=""; //contains the last message sent to display. Sometimes need to reshow it
 ulong activityLedTimeoff=millis();
 
+String webMessage="";
+
 // Replace placeholders in HTML with actual settings
 String processor(const String& var) 
   {
   char buf[max(SSID_SIZE,max(PASSWORD_SIZE,max(USERNAME_SIZE,MQTT_TOPIC_SIZE)))];
-  if (var =="broker")        return settings.mqttBrokerAddress;
-  if (var =="port")          return itoa(settings.mqttBrokerPort,buf,10);
-  if (var =="topicroot")     return settings.mqttTopicRoot;
-  if (var =="user")          return settings.mqttUsername;
-  if (var =="pass")          return settings.mqttPassword; 
-  if (var =="ssid")          return settings.ssid        ;
-  if (var =="wifipass")      return settings.wifiPassword;
-  if (var =="address")       return settings.address     ;
-  if (var =="netmask")       return settings.netmask     ;
-  if (var =="debug")         return settings.debug?"true":"false";
-  if (var =="checkinterval") return itoa(settings.checkInterval,buf,10);
+  if (var =="broker")           return settings.mqttBrokerAddress;
+  if (var =="port")             return itoa(settings.mqttBrokerPort,buf,10);
+  if (var =="topicroot")        return settings.mqttTopicRoot;
+  if (var =="user")             return settings.mqttUsername;
+  if (var =="pass")             return settings.mqttPassword; 
+  if (var =="ssid")             return settings.ssid        ;
+  if (var =="wifipass")         return settings.wifiPassword;
+  if (var =="address")          return settings.address     ;
+  if (var =="netmask")          return settings.netmask     ;
+  if (var =="debugChecked")     return settings.debug?" checked":"";
+  if (var =="activeLowChecked") return settings.activeLow?" checked":"";
+  if (var =="reportinterval")   return itoa(settings.reportInterval,buf,10);
+  if (var =="switchport")       return itoa(settings.switchPort,buf,10);
+  if (var =="message")       
+    {
+    String msg=webMessage;
+    webMessage="";    //only display the message once
+    Serial.println(msg);
+    return msg; 
+    }
   return String();
   }
 
@@ -120,8 +141,14 @@ void showSettings()
   Serial.print("debug=1|0 (");
   Serial.print(settings.debug);
   Serial.println(")");
-  Serial.print("checkinterval=<seconds>   (");
-  Serial.print(settings.checkInterval);
+  Serial.print("activelow=1|0 (");
+  Serial.print(settings.activeLow);
+  Serial.println(")");
+  Serial.print("reportinterval=<seconds>   (");
+  Serial.print(settings.reportInterval);
+  Serial.println(")");
+  Serial.print("switchport=<port number>   (");
+  Serial.print(settings.switchPort);
   Serial.println(")");
  
   Serial.print("MQTT Client ID is ");
@@ -199,6 +226,10 @@ bool processCommand(String cmd)
       else if (strcmp(nme,"topicroot")==0)
         {
         strcpy(settings.mqttTopicRoot,val);
+        if (val[strlen(val)-1] !='/') // must end with a /
+          {
+          strcat(settings.mqttTopicRoot,"/");
+          }
         saveSettings();
         }
       else if (strcmp(nme,"user")==0)
@@ -238,11 +269,25 @@ bool processCommand(String cmd)
         settings.debug=atoi(val)==1?true:false;
         saveSettings();
         }
-      else if (strcmp(nme,"checkinterval")==0)
+      else if (strcmp(nme,"activelow")==0)
         {
         if (!val)
           strcpy(val,"0");
-        settings.checkInterval=atoi(val);
+        settings.activeLow=atoi(val)==1?true:false;
+        saveSettings();
+        }
+      else if (strcmp(nme,"reportinterval")==0)
+        {
+        if (!val)
+          strcpy(val,"0");
+        settings.reportInterval=atoi(val);
+        saveSettings();
+        }
+      else if (strcmp(nme,"switchport")==0)
+        {
+        if (!val)
+          strcpy(val,"0");
+        settings.switchPort=atoi(val);
         saveSettings();
         }
       else if ((strcmp(nme,"resetmqttid")==0)&& (strcmp(val,"yes")==0))
@@ -280,7 +325,8 @@ void initializeSettings()
   strcpy(settings.mqttTopicRoot,"");
   strcpy(settings.address,"");
   strcpy(settings.netmask,"255.255.255.0");
-  settings.checkInterval=DEFAULT_CHECK_INTERVAL;
+  settings.reportInterval=DEFAULT_CHECK_INTERVAL;
+  settings.switchPort=0;
   generateMqttClientId(settings.mqttClientId);
   }
 
@@ -411,8 +457,13 @@ void incomingMqttHandler(char* reqTopic, byte* payload, unsigned int length)
     strcat(jsonStatus,settings.netmask);
     strcat(jsonStatus,"\", \"debug\":\"");
     strcat(jsonStatus,settings.debug?"true":"false");
-    strcat(jsonStatus,"\", \"checkinterval\":");
-    sprintf(tempbuf,"%d",settings.checkInterval);
+    strcat(jsonStatus,"\", \"activelow\":\"");
+    strcat(jsonStatus,settings.activeLow?"true":"false");
+    strcat(jsonStatus,"\", \"reportinterval\":");
+    sprintf(tempbuf,"%d",settings.reportInterval);
+    strcat(jsonStatus,tempbuf);
+    strcat(jsonStatus,"\", \"switchport\":");
+    sprintf(tempbuf,"%d",settings.switchPort);
     strcat(jsonStatus,tempbuf);
     strcat(jsonStatus,"\", \"IPAddress\":\"");
     strcat(jsonStatus,wifiClient.localIP().toString().c_str());
@@ -890,7 +941,7 @@ void setup()
       {
       if (!ip.fromString(settings.address)&& !isSoftAPRunning())
         {
-        Serial.println("Static IP Address "+String(settings.address)+" is not valid. Using dynamic addressing.");
+        Serial.println("Static IP Address '"+String(settings.address)+"' is blank or not valid. Using dynamic addressing.");
         // settingsAreValid=false;
         // settings.validConfig=false;
         }
@@ -906,37 +957,186 @@ void setup()
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) 
     {
     
-    if (settings.debug) //prove that the request and file are ok
-      {
-      Serial.println("Got request for index page.");
+    // if (settings.debug) //prove that the request and file are ok
+    //   {
+    //   Serial.println("Got request for index page.");
 
-      File file = LittleFS.open("index.html", "r"); // Open the file for reading
-      if (file)
-        {
-        // Read and print each character until the end of the file
-        while (file.available())
-          {
-          Serial.write(file.read()); // Use Serial.write for raw bytes, good for large files
-          }
-        file.close(); 
-        }
-      else
-        {
-        Serial.println("Can't open file.");
-        }
-      }
+    //   File file = LittleFS.open("index.html", "r"); // Open the file for reading
+    //   if (file)
+    //     {
+    //     // Read and print each character until the end of the file
+    //     while (file.available())
+    //       {
+    //       Serial.write(file.read()); // Use Serial.write for raw bytes, good for large files
+    //       }
+    //     file.close(); 
+    //     }
+    //   else
+    //     {
+    //     Serial.println("Can't open file.");
+    //     }
+    //   }
 
     request->send(LittleFS, "/index.html", String(), false, processor);
     });
 
   server.on("/save", HTTP_POST, [](AsyncWebServerRequest *request) 
     {
+    // if (settings.debug)
+    //   {
+    //   int params = request->params(); // total number of parameters in this request
+    //   for (int i = 0; i < params; i++)
+    //     {
+    //     AsyncWebParameter* p = request->getParam(i);
+    //     Serial.printf("Form Data - Name: '%s', Value: '%s'\n", p->name().c_str(), p->value().c_str());
+    //     }
+    //   }
+
+    bool changed=false; //starts out with nothing changed
+
     if (request->hasParam("ssid", true))
-      snprintf(settings.ssid,sizeof(settings.ssid),"%s",request->getParam("ssid", true)->value().c_str());
+      {
+      const char* val = request->getParam("ssid", true)->value().c_str();
+      if (strcmp(val, settings.ssid) != 0)  
+        {
+        snprintf(settings.ssid,sizeof(settings.ssid),"%s",val);
+        changed=true;
+        }
+      }
     if (request->hasParam("wifipass", true))
-      snprintf(settings.ssid,sizeof(settings.wifiPassword),"%s",request->getParam("wifipass", true)->value().c_str());
-    
-    saveSettings();
+      {
+      const char* val = request->getParam("wifipass", true)->value().c_str();
+      if (strcmp(val, settings.wifiPassword) != 0)  
+        {
+        snprintf(settings.wifiPassword,sizeof(settings.wifiPassword),"%s",val);
+        changed=true;
+        }
+      }
+    if (request->hasParam("address", true))
+      {
+      const char* val = request->getParam("address", true)->value().c_str();
+      if (strcmp(val, settings.address) != 0)  
+        {
+        snprintf(settings.address,sizeof(settings.address),"%s",val);
+        changed=true;
+        }
+      }
+    if (request->hasParam("netmask", true))
+      {
+      const char* val = request->getParam("netmask", true)->value().c_str();
+      if (strcmp(val, settings.netmask) != 0)  
+        {
+        snprintf(settings.netmask,sizeof(settings.netmask),"%s",val);
+        changed=true;
+        }
+      }
+    if (request->hasParam("broker", true))
+      {
+      const char* val = request->getParam("broker", true)->value().c_str();
+      if (strcmp(val, settings.mqttBrokerAddress) != 0)  
+        {
+        snprintf(settings.mqttBrokerAddress,sizeof(settings.mqttBrokerAddress),"%s",val);
+        changed=true;
+        }
+      }
+    if (request->hasParam("port", true))
+      {
+      int val = atoi(request->getParam("port", true)->value().c_str());
+      if (val != settings.mqttBrokerPort)  
+        {
+        settings.mqttBrokerPort=val;
+        changed=true;
+        }
+      }
+    if (request->hasParam("topicroot", true))
+      {
+      String vals = request->getParam("topicroot", true)->value();
+      if (!vals.endsWith("/"))  //enforce last slash rule
+        vals+="/";
+      const char* val = vals.c_str();
+
+      if (strcmp(val, settings.mqttTopicRoot) != 0)  
+        {
+        snprintf(settings.mqttTopicRoot,sizeof(settings.mqttTopicRoot),"%s",val);
+        changed=true;
+        }
+      }
+    if (request->hasParam("user", true))
+      {
+      const char* val = request->getParam("user", true)->value().c_str();
+      if (strcmp(val, settings.mqttUsername) != 0)  
+        {
+        snprintf(settings.mqttUsername,sizeof(settings.mqttUsername),"%s",val);
+        changed=true;
+        }
+      }
+    if (request->hasParam("pass", true))
+      {
+      const char* val = request->getParam("pass", true)->value().c_str();
+      if (strcmp(val, settings.mqttPassword) != 0)  
+        {
+        snprintf(settings.mqttPassword,sizeof(settings.mqttPassword),"%s",val);
+        changed=true;
+        }
+      }
+
+    if (request->hasParam("debug", true)) //Maybe not - debug doesn't show up if not checked.
+      {
+      String val = request->getParam("debug", true)->value();
+      bool bval=(strcmp(val.c_str(), "1") == 0);
+      if (bval != settings.debug)  
+        {
+        settings.debug=bval;
+        changed=true;
+        }
+      }
+    else if (settings.debug) //special case - checkbox not sent if not checked. Always true or false though.
+      {
+      settings.debug=false;
+      changed=true;
+      }
+
+    if (request->hasParam("activelow", true)) //Maybe not - debug doesn't show up if not checked.
+      {
+      String val = request->getParam("activelow", true)->value();
+      bool bval=(strcmp(val.c_str(), "1") == 0);
+      if (bval != settings.activeLow)  
+        {
+        settings.activeLow=bval;
+        changed=true;
+        }
+      }
+    else if (settings.activeLow) //special case - checkbox not sent if not checked. Always true or false though.
+      {
+      settings.activeLow=false;
+      changed=true;
+      }
+
+    if (request->hasParam("reportinterval", true))
+      {
+      int val = atoi(request->getParam("reportinterval", true)->value().c_str());
+      if (val != settings.reportInterval)  
+        {
+        settings.reportInterval=val;
+        changed=true;
+        }
+      }
+    if (request->hasParam("switchport", true))
+      {
+      int val = atoi(request->getParam("switchport", true)->value().c_str());
+      if (val != settings.switchPort)  
+        {
+        settings.switchPort=val;
+        changed=true;
+        }
+      }
+
+
+    if (changed)
+      {
+      saveSettings();
+      webMessage="Settings saved";
+      }
 
     request->redirect("/");  // Go back to main page
     });
@@ -948,12 +1148,13 @@ void setup()
 
 void loop()
   {
-  if (digitalRead(SWITCH_PIN)) //modify this for high or low inputs
+  bool switchStatus=digitalRead(SWITCH_PIN);
+  if (switchStatus==settings.activeLow) //means the device has triggered
     {
 
     }
 
-  if (settings.checkInterval==0)
+  if (settings.reportInterval==0)
     {
     if (settingsAreValid)
       {      
@@ -971,12 +1172,12 @@ void loop()
     }
   checkForCommand();
   
-  if (settingsAreValid && settings.checkInterval>0)
+  if (settingsAreValid && settings.reportInterval>0)
     {
     Serial.print("Sleeping for ");
-    Serial.print(settings.checkInterval);
+    Serial.print(settings.reportInterval);
     Serial.println(" seconds");
-    ESP.deepSleep(settings.checkInterval*1000000, WAKE_RF_DEFAULT); 
+    ESP.deepSleep(settings.reportInterval*1000000, WAKE_RF_DEFAULT); 
     }
   }
 
