@@ -13,6 +13,9 @@
 #define MQTT_TOPIC_ANALOG "analog"
 #define MQTT_TOPIC_RSSI "rssi"
 #define MQTT_TOPIC_SNR "snr"
+#define MQTT_TOPIC_FREE_HEAP "freeHeap"
+#define MQTT_TOPIC_HEAP_FRAGMENTATION "heapFrag"
+#define MQTT_TOPIC_MAX_FREE_BLOCK_SIZE "maxBlockSize"
 #define MQTT_CLIENT_ID_ROOT "GenericMonitor"
 #define MQTT_TOPIC_COMMAND_REQUEST "command"
 #define MQTT_PAYLOAD_SETTINGS_COMMAND "settings" //show all user accessable settings
@@ -20,6 +23,8 @@
 #define MQTT_PAYLOAD_REBOOT_COMMAND "reboot" //reboot the controller
 #define MQTT_PAYLOAD_VERSION_COMMAND "version" //show the version number
 #define MQTT_PAYLOAD_STATUS_COMMAND "status" //show the most recent flow values
+#define MQTT_PAYLOAD_ARMED_STATUS "armed" //device has not triggered
+#define MQTT_PAYLOAD_TRIPPED_STATUS "tripped" //device has triggered
 #define JSON_STATUS_SIZE SSID_SIZE+PASSWORD_SIZE+USERNAME_SIZE+MQTT_TOPIC_SIZE+150 //+150 for associated field names, etc
 #define PUBLISH_DELAY 400 //milliseconds to wait after publishing to MQTT to allow transaction to finish
 #define WIFI_TIMEOUT_SECONDS 30 // give up on wifi after this long
@@ -29,13 +34,14 @@
 #define DEFAULT_CHECK_INTERVAL 60 //seconds to sleep between checks
 #define SWITCH_PIN 0 //switch to monitor is on pin GPIO0
 #define STANDALONE_SSID "monitor" //SSID to use when in soft AP mode
+#define STAY_AWAKE_MINIMUM_MS 60000 //When woken, it will wait at least this long before going back to sleep. Includes startup time.
 
 void showSettings();
 String getConfigCommand();
 bool processCommand(String cmd);
 void checkForCommand();
 float read_pressure();
-bool report(int pressure);
+bool report();
 boolean publish(char* topic, const char* reading, boolean retain);
 void incomingMqttHandler(char* reqTopic, byte* payload, unsigned int length) ;
 void setup_wifi();

@@ -10,7 +10,7 @@
  *  broker=<broker name or address>
  *  port=<port number>   (defaults to 1883)
  *  topicroot=<topic root> (something like buteomont/gate/package/ - must end with / and 
- *  "present", "distance", "analog", or "voltage" will be added)
+ *  suffixes like "status", "distance", "analog", or "voltage" will be added)
  *  user=<mqtt user>
  *  pass=<mqtt password>
  *  ssid=<wifi ssid>
@@ -42,6 +42,8 @@
 #include "switchMonitor.h"
 
 #define VERSION "25.05.17.0"  //remember to update this after every change! YY.MM.DD.REV
+
+ADC_MODE(ADC_VCC); //use the ADC to measure battery voltage
 
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
@@ -82,7 +84,37 @@ ulong activityLedTimeoff=millis();
 
 String webMessage="";
 
-// Replace placeholders in HTML with actual settings
+// These are handy ESP metrics that can be used to measure performance and status.
+// --- System/Resource Metrics ---
+// uint32_t freeHeap = ESP.getFreeHeap();
+// uint8_t heapFragmentation = ESP.getHeapFragmentation(); // Returns a percentage (0-100)
+// uint32_t maxFreeBlockSize = ESP.getMaxFreeBlockSize();
+// uint32_t chipId = ESP.getChipId();
+// String resetReason = ESP.getResetReason();
+// uint32_t cpuFreqMHz = ESP.getCpuFreqMHz();
+// uint32_t flashChipId = ESP.getFlashChipId();
+// uint32_t flashChipSize = ESP.getFlashChipSize(); // Size as seen by SDK
+// uint32_t flashChipRealSize = ESP.getFlashChipRealSize(); // Actual physical size
+// uint32_t sketchSize = ESP.getSketchSize();
+// uint32_t freeSketchSpace = ESP.getFreeSketchSpace(); // Note: Often means space for OTA update
+
+// --- Power/Voltage Metrics ---
+// uint32_t vccMilliVolts = ESP.getVcc(); // Requires ADC_MODE(ADC_VCC) in global scope
+
+// --- Network-Related Metrics ---
+// long rssi = WiFi.RSSI();
+// int wifiStatus = WiFi.status(); // Returns WL_CONNECTED, WL_IDLE, etc.
+// IPAddress localIp = WiFi.localIP();
+// IPAddress gatewayIp = WiFi.gatewayIP();
+// IPAddress subnetMask = WiFi.subnetMask();
+// IPAddress dns1Ip = WiFi.dnsIP(); // Primary DNS server
+// IPAddress dns2Ip = WiFi.dnsIP(1); // Secondary DNS server (if configured)
+// String macAddressStr = WiFi.macAddress(); // Returns MAC as a String (e.g., "AA:BB:CC:DD:EE:FF")
+// uint8_t connectedApClients = WiFi.softAPgetStationNum(); // Only if in AP mode
+
+
+
+// This will replace placeholders in the HTML with actual settings
 String processor(const String& var) 
   {
   char buf[max(SSID_SIZE,max(PASSWORD_SIZE,max(USERNAME_SIZE,MQTT_TOPIC_SIZE)))];
@@ -352,18 +384,47 @@ bool report()
   char topic[MQTT_TOPIC_SIZE+9];
   char reading[18];
   bool ok=true;
-  sprintf(topic,"%s",settings.mqttTopicRoot);
-    
-  ok=publish(topic,reading,true);
+
+  bool switchStatus=digitalRead(SWITCH_PIN);
+  strcpy(topic,settings.mqttTopicRoot);
+  strcat(topic,MQTT_PAYLOAD_STATUS_COMMAND);
+  if (switchStatus==settings.activeLow) //means the device has triggered
+    publish(topic,MQTT_PAYLOAD_TRIPPED_STATUS,true);
+  else
+    publish(topic,MQTT_PAYLOAD_ARMED_STATUS,true);
 
   //publish the radio strength reading while we're at it
   strcpy(topic,settings.mqttTopicRoot);
   strcat(topic,MQTT_TOPIC_RSSI);
   sprintf(reading,"%d",WiFi.RSSI()); 
-  ok=ok|publish(topic,reading,true); //retain
+  ok=ok & publish(topic,reading,true); //retain
 
-  //publish the status
-  sprintf(topic,"%sstatus",settings.mqttTopicRoot);
+  //publish the battery voltage
+  uint32_t vccMilliVolts = ESP.getVcc(); // millivolts
+  float vccVolts = (float)vccMilliVolts / 1000.0;// Convert to Volts
+  strcpy(topic,settings.mqttTopicRoot);
+  strcat(topic,MQTT_TOPIC_BATTERY);
+  sprintf(reading,"%.2f",vccVolts); 
+  ok=ok & publish(topic,reading,true); //retain
+
+  // Publish some memory usage info
+  uint32_t freeHeap = ESP.getFreeHeap();
+  strcpy(topic,settings.mqttTopicRoot);
+  strcat(topic,MQTT_TOPIC_FREE_HEAP);
+  sprintf(reading,"%d",freeHeap); 
+  ok=ok & publish(topic,reading,true); //retain
+
+  uint8_t heapFragmentation = ESP.getHeapFragmentation(); // Returns a percentage (0-100)
+  strcpy(topic,settings.mqttTopicRoot);
+  strcat(topic,MQTT_TOPIC_HEAP_FRAGMENTATION);
+  sprintf(reading,"%d%%",heapFragmentation); 
+  ok=ok & publish(topic,reading,true); //retain
+
+  uint32_t maxFreeBlockSize = ESP.getMaxFreeBlockSize();
+  strcpy(topic,settings.mqttTopicRoot);
+  strcat(topic,MQTT_TOPIC_MAX_FREE_BLOCK_SIZE);
+  sprintf(reading,"%d",maxFreeBlockSize); 
+  ok=ok & publish(topic,reading,true); //retain
   
   if (settings.debug)
     {
@@ -479,8 +540,7 @@ void incomingMqttHandler(char* reqTopic, byte* payload, unsigned int length)
     }
   else if (strcmp(charbuf,MQTT_PAYLOAD_STATUS_COMMAND)==0) //show the latest value
     {
-//    report(read_pressure());
-    
+    report();
     char tmp[25];
     strcpy(tmp,"Status report complete");
     response=tmp;
@@ -1148,32 +1208,34 @@ void setup()
 
 void loop()
   {
-  bool switchStatus=digitalRead(SWITCH_PIN);
-  if (switchStatus==settings.activeLow) //means the device has triggered
-    {
-
-    }
-
-  if (settings.reportInterval==0)
-    {
-    if (settingsAreValid)
-      {      
-      if (WiFi.status() != WL_CONNECTED && !isSoftAPRunning())
-        {
-        connectToWiFi();
-        }
-      if (!mqttClient.connected() && WiFi.status() == WL_CONNECTED)
-        {
-        reconnectToBroker();
-        }  
-      else 
-        mqttClient.loop();
+  if (settingsAreValid)
+    {      
+    if (WiFi.status() != WL_CONNECTED && !isSoftAPRunning())
+      {
+      connectToWiFi();
       }
+    if (!mqttClient.connected() && WiFi.status() == WL_CONNECTED)
+      {
+      reconnectToBroker();
+      }  
+    else 
+      mqttClient.loop();
     }
+
   checkForCommand();
-  
-  if (settingsAreValid && settings.reportInterval>0)
+
+  static unsigned long nextReport=millis()+STAY_AWAKE_MINIMUM_MS;
+
+  if (settingsAreValid && settings.reportInterval==0 && millis() >= nextReport)
     {
+    nextReport=millis()+STAY_AWAKE_MINIMUM_MS;
+    report();
+    }
+
+  if (settingsAreValid && settings.reportInterval>0 && millis() > STAY_AWAKE_MINIMUM_MS)
+    {
+    report();
+
     Serial.print("Sleeping for ");
     Serial.print(settings.reportInterval);
     Serial.println(" seconds");
