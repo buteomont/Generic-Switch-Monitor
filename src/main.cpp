@@ -385,7 +385,7 @@ bool report()
   char reading[18];
   bool ok=true;
 
-  bool switchStatus=digitalRead(SWITCH_PIN);
+  bool switchStatus=digitalRead(settings.switchPort);
   strcpy(topic,settings.mqttTopicRoot);
   strcat(topic,MQTT_PAYLOAD_STATUS_COMMAND);
   if (switchStatus==settings.activeLow) //means the device has triggered
@@ -993,7 +993,11 @@ void setup()
 
   initServer();
 
-  pinMode(SWITCH_PIN,INPUT); //the port to which the switch is connected
+  if (settingsAreValid)
+    if (settings.activeLow)
+      pinMode(settings.switchPort,INPUT_PULLUP); //the port to which the switch is connected
+    else
+      pinMode(settings.switchPort,INPUT);
 
   if (settingsAreValid)
     {      
@@ -1204,6 +1208,20 @@ void setup()
   server.onNotFound(notFound);
 
   server.begin();  
+
+  // always do the report here
+  if (settingsAreValid)
+    {      
+    if (WiFi.status() != WL_CONNECTED && !isSoftAPRunning())
+      {
+      connectToWiFi();
+      }
+    if (!mqttClient.connected() && WiFi.status() == WL_CONNECTED)
+      {
+      reconnectToBroker();
+      }
+    report();
+    } 
   }
 
 void loop()
@@ -1232,10 +1250,9 @@ void loop()
     report();
     }
 
+  // Give someone a chance to change a setting before sleeping
   if (settingsAreValid && settings.reportInterval>0 && millis() > STAY_AWAKE_MINIMUM_MS)
     {
-    report();
-
     Serial.print("Sleeping for ");
     Serial.print(settings.reportInterval);
     Serial.println(" seconds");
