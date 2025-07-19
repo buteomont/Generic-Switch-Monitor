@@ -1188,7 +1188,7 @@ void loop()
 */
 void incomingSerialData() 
   {
-  while (Serial.available()) 
+  static bool lastCR = false; 
     {
     char inChar = (char)Serial.read(); // get the new byte
     Serial.print(inChar); //echo it back to the terminal
@@ -1197,10 +1197,17 @@ void incomingSerialData()
     // do something about it 
     if (inChar == '\n' || inChar == '\r') 
       {
-      commandComplete = true;
+      if (lastCR)     //some serial ports send both CR and LF, We want to ignore the second one
+        lastCR=false;
+      else
+        {
+        lastCR=true;
+        commandComplete = true;
+        }
       }
     else
       {
+      lastCR=false; //in case only one of \r and \n is sent
       // add it to the inputString 
       commandString += inChar;
       }
