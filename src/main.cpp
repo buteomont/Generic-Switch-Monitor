@@ -78,9 +78,7 @@ boolean settingsAreValid=false;
 IPAddress ip;
 IPAddress mask;
 
-boolean rssiShowing=false; //used to redraw the RSSI indicator after clearing display
-String lastMessage=""; //contains the last message sent to display. Sometimes need to reshow it
-ulong activityLedTimeoff=millis();
+ulong keepAwake=0; //this will be updated to allow more time to change settings on the web page
 
 String webMessage="";
 
@@ -1048,6 +1046,7 @@ void setup()
     //   }
 
     request->send(LittleFS, "/index.html", String(), false, processor);
+    keepAwake=millis()+STAY_AWAKE_INCREMENT; //stay awake a little longer for more web changes
     });
 
   server.on("/save", HTTP_POST, [](AsyncWebServerRequest *request) 
@@ -1209,6 +1208,7 @@ void setup()
       }
 
     request->redirect("/");  // Go back to main page
+    keepAwake=millis()+STAY_AWAKE_INCREMENT; //stay awake a little longer for more web changes
     });
   
   server.onNotFound(notFound);
@@ -1243,7 +1243,7 @@ void loop()
     }
 
   // Give someone a chance to change a setting before sleeping
-  if (settingsAreValid && settings.reportInterval>0 && millis() > STAY_AWAKE_MINIMUM_MS)
+  if (settingsAreValid && settings.reportInterval>0 && millis() > STAY_AWAKE_MINIMUM_MS && millis()>keepAwake)
     {
     Serial.print("Sleeping for ");
     Serial.print(settings.reportInterval);

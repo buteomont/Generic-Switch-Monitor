@@ -35,6 +35,7 @@
 #define SWITCH_PIN 14 //switch to monitor is on pin GPIO14 (D5) by default
 #define STANDALONE_SSID "monitor" //SSID to use when in soft AP mode
 #define STAY_AWAKE_MINIMUM_MS 30000 //When woken, it will wait at least this long before going back to sleep. Includes startup time.
+#define STAY_AWAKE_INCREMENT 60000  //Accessing the web page makes it stay awake this much longer
 
 void showSettings();
 String getConfigCommand();
