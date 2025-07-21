@@ -32,9 +32,9 @@
 #define FULL_BATTERY_VOLTS 412 //4.12 volts for a fully charged 18650 lithium battery 
 #define ONE_HOUR 3600000 //milliseconds
 #define DEFAULT_CHECK_INTERVAL 60 //seconds to sleep between checks
-#define SWITCH_PIN 0 //switch to monitor is on pin GPIO0
+#define SWITCH_PIN 14 //switch to monitor is on pin GPIO14 (D5) by default
 #define STANDALONE_SSID "monitor" //SSID to use when in soft AP mode
-#define STAY_AWAKE_MINIMUM_MS 60000 //When woken, it will wait at least this long before going back to sleep. Includes startup time.
+#define STAY_AWAKE_MINIMUM_MS 30000 //When woken, it will wait at least this long before going back to sleep. Includes startup time.
 
 void showSettings();
 String getConfigCommand();

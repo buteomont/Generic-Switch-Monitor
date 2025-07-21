@@ -385,10 +385,10 @@ bool report()
   char reading[18];
   bool ok=true;
 
-  bool switchStatus=digitalRead(settings.switchPort);
   strcpy(topic,settings.mqttTopicRoot);
   strcat(topic,MQTT_PAYLOAD_STATUS_COMMAND);
-  if (switchStatus==settings.activeLow) //means the device has triggered
+  bool switchStatus=digitalRead(settings.switchPort);
+  if (switchStatus!=settings.activeLow) //means the device has triggered (activeLow=1)
     publish(topic,MQTT_PAYLOAD_TRIPPED_STATUS,true);
   else
     publish(topic,MQTT_PAYLOAD_ARMED_STATUS,true);
@@ -796,7 +796,19 @@ boolean saveSettings()
 
 void initSerial()
   {
-  Serial.begin(115200);
+  //This code was originally written as a generic switch monitor that could be used on any
+  //ESP device. However, the ESP8266-01s is a special case; it only has two exposed IO ports,
+  //and neither can be used if it can be held low while booting.  The 3 lines below allow
+  //the RX pin to be used as a general purpose I/O pin. A side effect of this is that you
+  //can't send commands to the processor via the serial port.
+  //If you're not running this on the ESP8266-01s, or you have a use case that doesn't have 
+  //the possibility of the pin being held low during boot, then comment out the 3 lines 
+  //below and uncomment the 3rd one.  
+  Serial.begin(115200,SERIAL_8N1,SERIAL_TX_ONLY); 
+  pinMode(SWITCH_PIN, FUNCTION_3);
+  pinMode(settings.switchPort,INPUT_PULLUP);
+  //Serial.begin(115200);
+
   Serial.setTimeout(10000);
   
   while (!Serial); // wait here for serial port to connect.
@@ -992,12 +1004,6 @@ void setup()
   initFS();
 
   initServer();
-
-  if (settingsAreValid)
-    if (settings.activeLow)
-      pinMode(settings.switchPort,INPUT_PULLUP); //the port to which the switch is connected
-    else
-      pinMode(settings.switchPort,INPUT);
 
   if (settingsAreValid)
     {      
@@ -1208,20 +1214,6 @@ void setup()
   server.onNotFound(notFound);
 
   server.begin();  
-
-  // always do the report here
-  if (settingsAreValid)
-    {      
-    if (WiFi.status() != WL_CONNECTED && !isSoftAPRunning())
-      {
-      connectToWiFi();
-      }
-    if (!mqttClient.connected() && WiFi.status() == WL_CONNECTED)
-      {
-      reconnectToBroker();
-      }
-    report();
-    } 
   }
 
 void loop()
@@ -1242,9 +1234,9 @@ void loop()
 
   checkForCommand();
 
-  static unsigned long nextReport=millis()+STAY_AWAKE_MINIMUM_MS;
+  static unsigned long nextReport=0; //first report right away
 
-  if (settingsAreValid && settings.reportInterval==0 && millis() >= nextReport)
+  if (settingsAreValid && millis() >= nextReport)
     {
     nextReport=millis()+STAY_AWAKE_MINIMUM_MS;
     report();
