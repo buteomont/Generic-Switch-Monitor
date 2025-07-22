@@ -68,7 +68,7 @@ typedef struct
   bool debug=true;
   char address[ADDRESS_SIZE]=""; //static address for this device
   char netmask[ADDRESS_SIZE]=""; //size of network
-  uint16_t reportInterval=DEFAULT_CHECK_INTERVAL; //How long to wait between checks
+  ulong reportInterval=DEFAULT_CHECK_INTERVAL; //How long to wait between checks
   uint8_t switchPort=0; // GPIO port to which the monitored switch is connected
   bool activeLow=true; //It is considered triggered when switchport is low if this is checked. Hight otherwise.
   } conf;
@@ -81,6 +81,7 @@ IPAddress mask;
 ulong keepAwake=0; //this will be updated to allow more time to change settings on the web page
 
 String webMessage="";
+bool apModeActive=false;
 
 // These are handy ESP metrics that can be used to measure performance and status.
 // --- System/Resource Metrics ---
@@ -519,7 +520,7 @@ void incomingMqttHandler(char* reqTopic, byte* payload, unsigned int length)
     strcat(jsonStatus,"\", \"activelow\":\"");
     strcat(jsonStatus,settings.activeLow?"true":"false");
     strcat(jsonStatus,"\", \"reportinterval\":");
-    sprintf(tempbuf,"%d",settings.reportInterval);
+    sprintf(tempbuf,"%lu",settings.reportInterval);
     strcat(jsonStatus,tempbuf);
     strcat(jsonStatus,"\", \"switchport\":");
     sprintf(tempbuf,"%d",settings.switchPort);
@@ -892,6 +893,7 @@ void startAPMode()
   // Optional: Set a static IP for the AP (defaults to 192.168.4.1)
   WiFi.softAPConfig(IPAddress(192, 168, 4, 1), IPAddress(192, 168, 4, 1), IPAddress(255, 255, 255, 0));
   bool result = WiFi.softAP(STANDALONE_SSID, "password");
+  apModeActive=true;
 
   if (result) 
     {
@@ -963,14 +965,14 @@ void connectToWiFi()
         Serial.print(".");
         lastDotTime = millis();
         }
-//      checkForCommand(); // Check for input in case something needs to be changed to work
+      checkForCommand(); // Check for input in case something needs to be changed to work
       yield();
       }
 
     if (WiFi.status() != WL_CONNECTED)
       {
       Serial.println("\nConnection to network failed. Opening AP mode.");
-//      startAPMode();  //fire up our own network
+      startAPMode();  //fire up our own network
       }
     else 
       {
@@ -1183,7 +1185,7 @@ void setup()
 
     if (request->hasParam("reportinterval", true))
       {
-      int val = atoi(request->getParam("reportinterval", true)->value().c_str());
+      ulong val = (ulong)atol(request->getParam("reportinterval", true)->value().c_str());
       if (val != settings.reportInterval)  
         {
         settings.reportInterval=val;
@@ -1236,14 +1238,18 @@ void loop()
 
   static unsigned long nextReport=0; //first report right away
 
-  if (settingsAreValid && millis() >= nextReport)
+  if (settingsAreValid && millis() >= nextReport && !apModeActive)
     {
     nextReport=millis()+STAY_AWAKE_MINIMUM_MS;
     report();
     }
 
   // Give someone a chance to change a setting before sleeping
-  if (settingsAreValid && settings.reportInterval>0 && millis() > STAY_AWAKE_MINIMUM_MS && millis()>keepAwake)
+  if (settingsAreValid && 
+      settings.reportInterval>0 && 
+      millis() > STAY_AWAKE_MINIMUM_MS &&
+      !apModeActive &&
+      millis()>keepAwake)
     {
     Serial.print("Sleeping for ");
     Serial.print(settings.reportInterval);
