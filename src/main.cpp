@@ -35,6 +35,7 @@
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <ESP8266WiFi.h>
+#include <ESP8266mDNS.h>
 #include <ESPAsyncWebServer.h>
 #include <FS.h>
 #include <LittleFS.h>
@@ -801,8 +802,9 @@ void initSerial()
   //the RX pin to be used as a general purpose I/O pin. A side effect of this is that you
   //can't send commands to the processor via the serial port.
   //If you're not running this on the ESP8266-01s, or you have a use case that doesn't have 
-  //the possibility of the pin being held low during boot, then comment out the 3 lines 
-  //below and uncomment the 3rd one.  
+  //the possibility of the pin being held low during boot, or you're programming a ESP8266-01s
+  //for the first time, then comment out the 3 lines below and uncomment the 4th one.
+
   Serial.begin(115200,SERIAL_8N1,SERIAL_TX_ONLY); 
   pinMode(SWITCH_PIN, FUNCTION_3);
   pinMode(settings.switchPort,INPUT_PULLUP);
@@ -904,7 +906,8 @@ void startAPMode()
     {
     Serial.println("Failed to start SoftAP!");
     }
-}
+  keepAwake=millis()+STAY_AWAKE_INCREMENT; //stay awake a while for changes via web page
+  }
 
 /**
  * @brief Checks if the ESP8266 SoftAP is actively running.
@@ -914,27 +917,27 @@ void startAPMode()
  *
  * @return true if SoftAP is running and initialized, false otherwise.
  */
-bool isSoftAPRunning()
-  {
-  // Check if the current Wi-Fi mode is AP or AP_STA
-  if (WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA)
-    {
-    // Additionally, check if the SoftAP has successfully obtained an IP address.
-    // If the IP is 0.0.0.0, it usually means the AP failed to start correctly.
-    if (WiFi.softAPIP()[0] != 0)
-      {
-      return true; // AP mode is active and has an IP
-      }
-    }
-  return false; // AP mode is not active or hasn't got an IP
-  }
+// bool isSoftAPRunning()
+//   {
+//   // Check if the current Wi-Fi mode is AP or AP_STA
+//   if (WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA)
+//     {
+//     // Additionally, check if the SoftAP has successfully obtained an IP address.
+//     // If the IP is 0.0.0.0, it usually means the AP failed to start correctly.
+//     if (WiFi.softAPIP()[0] != 0)
+//       {
+//       return true; // AP mode is active and has an IP
+//       }
+//     }
+//   return false; // AP mode is not active or hasn't got an IP
+//   }
 
 /*
  * If not connected to wifi, connect.
  */
 void connectToWiFi()
   {
-  if (settingsAreValid && WiFi.status() != WL_CONNECTED && !isSoftAPRunning())
+  if (settingsAreValid && WiFi.status() != WL_CONNECTED && !apModeActive)
     {
     Serial.print("Attempting to connect to WPA SSID \"");
     Serial.print(settings.ssid);
@@ -979,8 +982,8 @@ void connectToWiFi()
       Serial.print("\nConnected to network with address ");
       Serial.println(WiFi.localIP());
       Serial.println();
-      server.begin();
       }
+    // server.begin();
     }
   }
 
@@ -988,6 +991,11 @@ void initServer()
   {
   connectToWiFi(); //will either connect to wifo or set up AP mode
   server.begin();
+
+  MDNS.addService("http", "tcp", 80);
+  Serial.print("Setting MDNS name to ");
+  Serial.println(MDNS_DEFAULT_NAME);
+  MDNS.begin(MDNS_DEFAULT_NAME);
   }
 
 void notFound(AsyncWebServerRequest *request) 
@@ -1009,13 +1017,13 @@ void setup()
     {      
     if (settings.debug)
       {
-      if (!ip.fromString(settings.address)&& !isSoftAPRunning())
+      if (!ip.fromString(settings.address)&& !apModeActive)
         {
         Serial.println("Static IP Address '"+String(settings.address)+"' is blank or not valid. Using dynamic addressing.");
         // settingsAreValid=false;
         // settings.validConfig=false;
         }
-      else if (!mask.fromString(settings.netmask)&& !isSoftAPRunning())
+      else if (!mask.fromString(settings.netmask)&& !apModeActive)
         {
         Serial.println("Static network mask "+String(settings.netmask)+" is not valid.");
         // settingsAreValid=false;
@@ -1209,8 +1217,8 @@ void setup()
       webMessage="Settings saved";
       }
 
-    request->redirect("/");  // Go back to main page
     keepAwake=millis()+STAY_AWAKE_INCREMENT; //stay awake a little longer for more web changes
+    request->redirect("/");  // Go back to main page
     });
   
   server.onNotFound(notFound);
@@ -1222,7 +1230,7 @@ void loop()
   {
   if (settingsAreValid)
     {      
-    if (WiFi.status() != WL_CONNECTED && !isSoftAPRunning())
+    if (WiFi.status() != WL_CONNECTED && !apModeActive)
       {
       connectToWiFi();
       }
@@ -1248,7 +1256,6 @@ void loop()
   if (settingsAreValid && 
       settings.reportInterval>0 && 
       millis() > STAY_AWAKE_MINIMUM_MS &&
-      !apModeActive &&
       millis()>keepAwake)
     {
     Serial.print("Sleeping for ");

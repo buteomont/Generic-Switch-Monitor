@@ -36,6 +36,7 @@
 #define STANDALONE_SSID "monitor" //SSID to use when in soft AP mode
 #define STAY_AWAKE_MINIMUM_MS 30000 //When woken, it will wait at least this long before going back to sleep. Includes startup time.
 #define STAY_AWAKE_INCREMENT 60000  //Accessing the web page makes it stay awake this much longer
+#define MDNS_DEFAULT_NAME "mousetrap" //need to make this part of the configuration settings
 
 void showSettings();
 String getConfigCommand();
