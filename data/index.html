@@ -25,6 +25,7 @@
     <table>
       <tr><td>Debug Flag:    </td><td><input type="checkbox" name="debug" value="1" %debugChecked% onchange="document.getElementById('saveButton').disabled = false;" /></td><td>If checked, prints diagnostic info to the serial port.</td></tr>
       <tr><td>Report Interval:</td><td><input name="reportinterval" value="%reportinterval%" onchange="document.getElementById('saveButton').disabled = false;" />     </td><td>How often in seconds to issue a status report. Processor will sleep between checks.</td></tr>
+      <tr><td>MDNS Name:</td><td><input name="mdnsname" value="%mdnsname%" onchange="document.getElementById('saveButton').disabled = false;" />     </td><td>Use this name followed by ".local" to access this web page (e.g., mousetrap.local)</td></tr>
       <tr><td>Switch Port:</td><td><input name="switchport" value="%switchport%" onchange="document.getElementById('saveButton').disabled = false;" />     </td><td>The port number that is being monitored</td></tr>
       <tr><td>Active Low:    </td><td><input type="checkbox" name="activelow" value="1" %activeLowChecked% onchange="document.getElementById('saveButton').disabled = false;" /></td><td>If checked, switchPort will trigger when pulled low instead of high.</td></tr>
       <tr><td colspan=3>&nbsp;</td></tr>

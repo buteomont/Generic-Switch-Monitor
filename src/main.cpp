@@ -69,9 +69,10 @@ typedef struct
   bool debug=true;
   char address[ADDRESS_SIZE]=""; //static address for this device
   char netmask[ADDRESS_SIZE]=""; //size of network
-  ulong reportInterval=DEFAULT_CHECK_INTERVAL; //How long to wait between checks
+  ulong reportInterval=DEFAULT_REPORT_INTERVAL; //How long to wait between checks
   uint8_t switchPort=0; // GPIO port to which the monitored switch is connected
   bool activeLow=true; //It is considered triggered when switchport is low if this is checked. Hight otherwise.
+  char mdnsName[ADDRESS_SIZE]=""; //Name to use for MDNS (without .local suffix)
   } conf;
 conf settings; //all settings in one struct makes it easier to store in EEPROM
 boolean settingsAreValid=false;
@@ -131,6 +132,7 @@ String processor(const String& var)
   if (var =="activeLowChecked") return settings.activeLow?" checked":"";
   if (var =="reportinterval")   return itoa(settings.reportInterval,buf,10);
   if (var =="switchport")       return itoa(settings.switchPort,buf,10);
+  if (var =="mdnsname")         return settings.mdnsName     ;
   if (var =="message")       
     {
     String msg=webMessage;
@@ -168,6 +170,9 @@ void showSettings()
   Serial.print(settings.address);
   Serial.println(")");
   Serial.print("netmask=<Network mask to be used with static IP> (");
+  Serial.print(settings.netmask);
+  Serial.println(")");
+  Serial.print("mdnsname=<Name to use (without .local) for MDNS> (");
   Serial.print(settings.netmask);
   Serial.println(")");
   Serial.print("debug=1|0 (");
@@ -289,6 +294,11 @@ bool processCommand(String cmd)
         strcpy(settings.address,val);
         saveSettings();
         }
+      else if (strcmp(nme,"mdnsname")==0)
+        {
+        strcpy(settings.mdnsName,val);
+        saveSettings();
+        }
       else if (strcmp(nme,"netmask")==0)
         {
         strcpy(settings.netmask,val);
@@ -355,9 +365,10 @@ void initializeSettings()
   strcpy(settings.mqttUsername,"");
   strcpy(settings.mqttPassword,"");
   strcpy(settings.mqttTopicRoot,"");
+  strcpy(settings.mdnsName,"");
   strcpy(settings.address,"");
   strcpy(settings.netmask,"255.255.255.0");
-  settings.reportInterval=DEFAULT_CHECK_INTERVAL;
+  settings.reportInterval=DEFAULT_REPORT_INTERVAL;
   settings.switchPort=0;
   generateMqttClientId(settings.mqttClientId);
   }
@@ -516,6 +527,8 @@ void incomingMqttHandler(char* reqTopic, byte* payload, unsigned int length)
     strcat(jsonStatus,settings.address);
     strcat(jsonStatus,"\", \"netmask\":\"");
     strcat(jsonStatus,settings.netmask);
+    strcat(jsonStatus,"\", \"mdnsname\":\"");
+    strcat(jsonStatus,settings.mdnsName);
     strcat(jsonStatus,"\", \"debug\":\"");
     strcat(jsonStatus,settings.debug?"true":"false");
     strcat(jsonStatus,"\", \"activelow\":\"");
@@ -755,6 +768,7 @@ bool settingsSanityCheck()
       && checkString(settings.mqttTopicRoot)
       && checkString(settings.mqttClientId)
       && checkString(settings.address)
+      && checkString(settings.mdnsName)
       && checkString(settings.netmask);
   }
 
@@ -1158,7 +1172,15 @@ void setup()
         changed=true;
         }
       }
-
+    if (request->hasParam("mdnsname", true))
+      {
+      const char* val = request->getParam("mdnsnamer", true)->value().c_str();
+      if (strcmp(val, settings.mdnsName) != 0)  
+        {
+        snprintf(settings.mdnsName,sizeof(settings.mdnsName),"%s",val);
+        changed=true;
+        }
+      }
     if (request->hasParam("debug", true)) //Maybe not - debug doesn't show up if not checked.
       {
       String val = request->getParam("debug", true)->value();
