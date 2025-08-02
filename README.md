@@ -4,6 +4,7 @@ This is a general purpose program to monitor up to 10 ports of a processor and r
 This program will put the processor in deep-sleep mode and will stay there until one of two things occur:
  1. The processor is reset by momentarily pulling the reset pin low.
  2. The number of seconds in the configuration parameter ***reportInterval*** has passed since the last wakeup.
+
 When it wakes, it will connect to the specified router, subscribe to the command
 topic (&lt;topicRoot&gt;/command) on the specified broker, and publish a set of values.
 
