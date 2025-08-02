@@ -63,4 +63,4 @@ NOTES:
  1. Most ports on ESP devices are multi-purpose, so you have to be very careful about which one you choose for your use case. Some ***must*** be in a certain state (high or low) when the device wakes up, or it simply will not boot. This is especially a problem on the ESP8266-01s, as only ports 0 and 2 are brought to the interface and they both have this limitation. The TX and RX lines (GPIO 1 and GPIO 3, respectively) can be used for general purpose I/O, but the serial port initialization code must be modified to prevent conflicts and you will lose the ability to configure via the serial port.
  2. In Putty you may have to use ctl-M ctl-J instead of the ENTER key when entering configuration parameters.
  3. If you're using an ESP8266-01s, don't forget you have to bodge GPIO16 to the reset pin. It takes a good eye (or magnifier) and a steady hand, but it is possible.
- 4. 
+
