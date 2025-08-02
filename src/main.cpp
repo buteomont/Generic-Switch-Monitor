@@ -25,7 +25,9 @@
  * to keep it awake while you make changes. Reset the reportinterval when you are finished
  * and don't forget to remove the retained MQTT message.
  * 
- * NOTE: to upload a new web page from LittleFS, use "pio run --target uploadfs" in a 
+ * NOTE1: If you're using an ESP8266-01s, don't forget to bodge GPIO16 to the reset pin! 
+ * 
+ * NOTE2: to upload a new web page from LittleFS, use "pio run --target uploadfs" in a 
  * terminal window.
  *
   */
@@ -53,6 +55,14 @@ AsyncWebServer server(80);
 String commandString = "";     // a String to hold incoming commands from serial
 bool commandComplete = false;  // goes true when enter is pressed
 
+typedef struct //these are the ports to monitor
+  {
+  bool isActive; //this entry is being used if this flag is true
+  uint8_t gpioNumber;
+  char highTopic[MQTT_TOPIC_SUFFIX_SIZE];
+  char lowTopic[MQTT_TOPIC_SUFFIX_SIZE];
+  } port;
+
 // These are the settings that get stored in EEPROM.  They are all in one struct which
 // makes it easier to store and retrieve.
 typedef struct 
@@ -73,6 +83,7 @@ typedef struct
   uint8_t switchPort=0; // GPIO port to which the monitored switch is connected
   bool activeLow=true; //It is considered triggered when switchport is low if this is checked. Hight otherwise.
   char mdnsName[ADDRESS_SIZE]=""; //Name to use for MDNS (without .local suffix)
+  port ports[PORT_COUNT];
   } conf;
 conf settings; //all settings in one struct makes it easier to store in EEPROM
 boolean settingsAreValid=false;
@@ -114,6 +125,22 @@ bool apModeActive=false;
 // uint8_t connectedApClients = WiFi.softAPgetStationNum(); // Only if in AP mode
 
 
+// Accept a port number, and return the index into the settings.ports[] for that port
+// Only works for ports 0-5 and 12-16.  Returns -1 otherwise.
+int8_t portIndex(int8_t portNumber)
+  {
+  if (portNumber>16 || (portNumber>5 && portNumber<12))
+    {
+    Serial.print("Port ");
+    Serial.print(portNumber);
+    Serial.println(" is invalid.");
+    return -1;
+    }
+  if (portNumber<=5)
+    return portNumber;
+  else
+    return portNumber-6;
+  }
 
 // This will replace placeholders in the HTML with actual settings
 String processor(const String& var) 
@@ -133,6 +160,50 @@ String processor(const String& var)
   if (var =="reportinterval")   return itoa(settings.reportInterval,buf,10);
   if (var =="switchport")       return itoa(settings.switchPort,buf,10);
   if (var =="mdnsname")         return settings.mdnsName     ;
+  if (var =="gpio0Checked")     return settings.ports[0].isActive?" checked":"";
+  if (var =="gpio0highval")     return settings.ports[0].highTopic;
+  if (var =="gpio0lowval")      return settings.ports[0].lowTopic;
+  
+  if (var =="gpio1Checked")     return settings.ports[1].isActive?" checked":"";
+  if (var =="gpio1highval")     return settings.ports[1].highTopic;
+  if (var =="gpio1lowval")      return settings.ports[1].lowTopic;
+  
+  if (var =="gpio2Checked")     return settings.ports[2].isActive?" checked":"";
+  if (var =="gpio2highval")     return settings.ports[2].highTopic;
+  if (var =="gpio2lowval")      return settings.ports[2].lowTopic;
+  
+  if (var =="gpio3Checked")     return settings.ports[3].isActive?" checked":"";
+  if (var =="gpio3highval")     return settings.ports[3].highTopic;
+  if (var =="gpio3lowval")      return settings.ports[3].lowTopic;
+  
+  if (var =="gpio4Checked")     return settings.ports[4].isActive?" checked":"";
+  if (var =="gpio4highval")     return settings.ports[4].highTopic;
+  if (var =="gpio4lowval")      return settings.ports[4].lowTopic;
+  
+  if (var =="gpio5Checked")     return settings.ports[5].isActive?" checked":"";
+  if (var =="gpio5highval")     return settings.ports[5].highTopic;
+  if (var =="gpio5lowval")      return settings.ports[5].lowTopic;
+  
+  if (var =="gpio12Checked")     return settings.ports[6].isActive?" checked":"";
+  if (var =="gpio12highval")     return settings.ports[6].highTopic;
+  if (var =="gpio12lowval")      return settings.ports[6].lowTopic;
+  
+  if (var =="gpio13Checked")     return settings.ports[7].isActive?" checked":"";
+  if (var =="gpio13highval")     return settings.ports[7].highTopic;
+  if (var =="gpio13lowval")      return settings.ports[7].lowTopic;
+  
+  if (var =="gpio14Checked")     return settings.ports[8].isActive?" checked":"";
+  if (var =="gpio14highval")     return settings.ports[8].highTopic;
+  if (var =="gpio14lowval")      return settings.ports[8].lowTopic;
+  
+  if (var =="gpio15Checked")     return settings.ports[9].isActive?" checked":"";
+  if (var =="gpio15highval")     return settings.ports[9].highTopic;
+  if (var =="gpio15lowval")      return settings.ports[9].lowTopic;
+  
+  if (var =="gpio16Checked")     return settings.ports[10].isActive?" checked":"";
+  if (var =="gpio16highval")     return settings.ports[10].highTopic;
+  if (var =="gpio16lowval")      return settings.ports[10].lowTopic;
+  
   if (var =="message")       
     {
     String msg=webMessage;
@@ -173,7 +244,7 @@ void showSettings()
   Serial.print(settings.netmask);
   Serial.println(")");
   Serial.print("mdnsname=<Name to use (without .local) for MDNS> (");
-  Serial.print(settings.netmask);
+  Serial.print(settings.mdnsName);
   Serial.println(")");
   Serial.print("debug=1|0 (");
   Serial.print(settings.debug);
@@ -187,11 +258,31 @@ void showSettings()
   Serial.print("switchport=<port number>   (");
   Serial.print(settings.switchPort);
   Serial.println(")");
- 
+  
+  Serial.println("Ports:");
+  bool noActivePorts=true;
+  for (int i=0;i<PORT_COUNT;i++)
+    {
+    port& iport=settings.ports[i];
+    if (iport.isActive)
+      {
+      Serial.printf("GPIO=%d\tHigh Topic=%s\tLow Topic=%s\n",
+                    iport.gpioNumber,
+                    iport.highTopic,
+                    iport.lowTopic);
+      noActivePorts=false;
+      }
+    yield();
+    }
+  if (noActivePorts)
+    Serial.println("No ports configured.");
+
   Serial.print("MQTT Client ID is ");
   Serial.println(settings.mqttClientId);
   Serial.print("Address is ");
   Serial.println(wifiClient.localIP());
+  Serial.println("To assign ports, use \"portadd=gpio,hightopic,lowtopic\"");
+  Serial.println("To remove a port, use \"portremove=gpio\"");
   Serial.println("\n*** Use NULL to reset a setting to its default value ***");
   Serial.println("*** Use \"resetmqttid=yes\" to reset all settings  ***");
   Serial.println("*** Use \"factorydefaults=yes\" to reset all settings  ***\n");
@@ -224,12 +315,16 @@ String getConfigCommand()
 bool processCommand(String cmd)
   {
   bool commandFound=true; //saves a lot of code
+  char nme[30]; //shouldn't get any commands larger than this
   const char *str=cmd.c_str();
   char *val=NULL;
-  char *nme=strtok((char *)str,"=");
-  if (nme!=NULL)
+  char *nme_t=strtok((char *)str,"=");
+  strcpy(nme,nme_t);//Don't modify c_str() pointers
+  if (nme_t!=NULL)
     val=strtok(NULL,"=");
-
+  else
+    strcpy(nme,"\n"); 
+  
   if (nme[0]=='\n' || nme[0]=='\r' || nme[0]=='\0') //a single cr means show current settings
     {
     showSettings();
@@ -332,6 +427,61 @@ bool processCommand(String cmd)
         settings.switchPort=atoi(val);
         saveSettings();
         }
+
+      // "portadd=gpio,hightopic,lowtopic" should add a port
+      else if (strcmp(nme,"portadd")==0)
+        {
+        if (val)
+          {
+          char *portnum=strtok(val,",");
+          char *hitopic=strtok(NULL,",");
+          char *lotopic=strtok(NULL,",");
+          uint8_t port=atoi(portnum);
+          int8_t index=portIndex(port);
+          if (index>=0)
+            {
+            settings.ports[index].isActive=true;
+            settings.ports[index].gpioNumber=port;
+            if (hitopic)
+              {  
+              strncpy(settings.ports[index].highTopic,hitopic,MQTT_TOPIC_SUFFIX_SIZE-1);
+              settings.ports[index].highTopic[MQTT_TOPIC_SUFFIX_SIZE-1]='\0'; //ensure null termination
+              }
+            else
+              strcpy(settings.ports[index].highTopic,"high");
+
+            if (lotopic)
+              {  
+              strncpy(settings.ports[index].lowTopic,lotopic,MQTT_TOPIC_SUFFIX_SIZE-1);
+              settings.ports[index].lowTopic[MQTT_TOPIC_SUFFIX_SIZE-1]='\0'; //ensure null termination
+              }
+            else
+              strcpy(settings.ports[index].lowTopic,"low");
+
+            saveSettings();
+            }
+          else
+            commandFound=false;
+          }
+        }
+
+      // "portremove=gpio" should remove a port
+     else if (strcmp(nme,"portremove")==0)
+        {
+        if (val)
+          {
+          uint8_t port=atoi(val);
+          int8_t index=portIndex(port);
+          if (index>=0)
+            {
+            settings.ports[index].isActive=false;
+            saveSettings();
+            }
+          else
+            commandFound=false;
+          }
+        }
+
       else if ((strcmp(nme,"resetmqttid")==0)&& (strcmp(val,"yes")==0))
         {
         generateMqttClientId(settings.mqttClientId);
@@ -371,6 +521,8 @@ void initializeSettings()
   settings.reportInterval=DEFAULT_REPORT_INTERVAL;
   settings.switchPort=0;
   generateMqttClientId(settings.mqttClientId);
+  for (int i=0;i<PORT_COUNT;i++)
+    settings.ports[i].isActive=false;
   }
 
 void checkForCommand()
@@ -381,6 +533,7 @@ void checkForCommand()
     String cmd=getConfigCommand();
     if (cmd.length()>0)
       {
+      yield();
       processCommand(cmd);
       }
     }
@@ -398,11 +551,19 @@ bool report()
 
   strcpy(topic,settings.mqttTopicRoot);
   strcat(topic,MQTT_PAYLOAD_STATUS_COMMAND);
-  bool switchStatus=digitalRead(settings.switchPort);
-  if (switchStatus!=settings.activeLow) //means the device has triggered (activeLow=1)
-    publish(topic,MQTT_PAYLOAD_TRIPPED_STATUS,true);
-  else
-    publish(topic,MQTT_PAYLOAD_ARMED_STATUS,true);
+  // bool switchStatus=digitalRead(settings.switchPort);
+  // if (switchStatus!=settings.activeLow) //means the device has triggered (activeLow=1)
+  //   publish(topic,MQTT_PAYLOAD_TRIPPED_STATUS,true);
+  // else
+  //   publish(topic,MQTT_PAYLOAD_ARMED_STATUS,true);
+  for (int i=0;i<PORT_COUNT;i++)
+    {
+    if (settings.ports[i].isActive)
+      {
+      bool switchStatus=digitalRead(settings.ports[i].gpioNumber);
+      publish(topic,switchStatus?settings.ports[i].highTopic:settings.ports[i].lowTopic,false);
+      }
+    }
 
   //publish the radio strength reading while we're at it
   strcpy(topic,settings.mqttTopicRoot);
@@ -536,13 +697,35 @@ void incomingMqttHandler(char* reqTopic, byte* payload, unsigned int length)
     strcat(jsonStatus,"\", \"reportinterval\":");
     sprintf(tempbuf,"%lu",settings.reportInterval);
     strcat(jsonStatus,tempbuf);
-    strcat(jsonStatus,"\", \"switchport\":");
+    strcat(jsonStatus,", \"switchport\":");
     sprintf(tempbuf,"%d",settings.switchPort);
     strcat(jsonStatus,tempbuf);
-    strcat(jsonStatus,"\", \"IPAddress\":\"");
+    strcat(jsonStatus,", \"IPAddress\":\"");
     strcat(jsonStatus,wifiClient.localIP().toString().c_str());
+    strcat(jsonStatus,"\",");
+    strcat(jsonStatus,"\"ports\":[");
+    for (int i=0;i<PORT_COUNT;i++)
+      {
+      if (settings.ports[i].isActive)
+        {
+        strcat(jsonStatus,"{\"GPIO\":");
+        sprintf(tempbuf,"%d",settings.ports[i].gpioNumber);
+        strcat(jsonStatus,tempbuf);
+        strcat(jsonStatus,"\", \"hightopic\":\"");
+        strcat(jsonStatus,settings.ports[i].highTopic);
+        strcat(jsonStatus,"\", \"lowtopic\":\"");
+        strcat(jsonStatus,settings.ports[i].lowTopic);
+        strcat(jsonStatus,"\"},");
+        }
+      yield();
+      }
+    size_t len = strlen(jsonStatus);
+    if (jsonStatus[len - 1] == ',')
+      jsonStatus[len - 1] = ']';   //replace the last comma to close the array
+    else
+      strcat(jsonStatus,"]"); //happens when port array is empty
     
-    strcat(jsonStatus,"\"}");
+    strcat(jsonStatus,"}");
     response=jsonStatus;
     }
   else if (strcmp(charbuf,MQTT_PAYLOAD_VERSION_COMMAND)==0) //show the version number
@@ -675,7 +858,8 @@ void reconnectToBroker()
         mqttClient.setKeepAlive(120); //seconds
         mqttClient.setServer(settings.mqttBrokerAddress, settings.mqttBrokerPort);
         mqttClient.setCallback(incomingMqttHandler);
-        
+        yield();
+
         // Attempt to connect
         if (mqttClient.connect(settings.mqttClientId,settings.mqttUsername,settings.mqttPassword))
           {
@@ -697,8 +881,9 @@ void reconnectToBroker()
           // Wait a second before retrying
           // In the meantime check for input in case something needs to be changed to make it work
         //  checkForCommand(); 
-          
+          yield();
           delay(1000);
+          yield();
           }
         checkForCommand();
         }
@@ -753,6 +938,41 @@ bool checkString(const char* str)
   return true;
   }
 
+// Check all of the text in all active ports for sanity
+bool checkPorts()
+  {
+  bool hasOne=false; //settings are incomplete unless we have at least one port activated
+  for (int i=0;i<PORT_COUNT;i++)
+    {
+    // if (settings.debug)
+    //   {
+    //   Serial.print("Active:");
+    //   Serial.println(settings.ports[i].isActive?"true":"false");
+    //   Serial.print("GPIO:");
+    //   Serial.println(settings.ports[i].gpioNumber);
+    //   Serial.print("High Topic:");
+    //   Serial.println(settings.ports[i].highTopic);
+    //   Serial.print("Low Topic:");
+    //   Serial.println(settings.ports[i].lowTopic);
+    //   }
+    if (settings.ports[i].isActive)
+      {
+      hasOne=true;
+      if (!(checkString(settings.ports[i].highTopic) &&
+             checkString(settings.ports[i].lowTopic)))
+        return false;
+      }
+    else //clear out any that are inactive
+      {
+      settings.ports[i].gpioNumber=0;
+      settings.ports[i].highTopic[0]='\0';
+      settings.ports[i].lowTopic[0]='\0';
+      }
+//    yield();
+    }
+  return true && hasOne;
+  }
+
 /*
  * Check all of the strings in the settings.   If any of the
  * character strings in the settings fail the test, it's 
@@ -769,7 +989,9 @@ bool settingsSanityCheck()
       && checkString(settings.mqttClientId)
       && checkString(settings.address)
       && checkString(settings.mdnsName)
-      && checkString(settings.netmask);
+      && checkString(settings.netmask)
+      && checkPorts()
+      ;
   }
 
 /*
@@ -808,6 +1030,25 @@ boolean saveSettings()
   return EEPROM.commit();
   }
 
+  //This is a special initialization function. Do not call except when necessary.
+void initTopicForTesting()
+  {
+  strcpy(settings.mqttTopicRoot,"buteomont/mousetest/"); // To keep from messing up the real mousetrap
+  saveSettings();
+  }
+
+void erasePortsForTesting()
+  {
+  for (int i=0;i<PORT_COUNT;i++)
+    {
+    settings.ports[i].isActive=false;
+    settings.ports[i].highTopic[0]='\0';
+    settings.ports[i].lowTopic[0]='\0';
+    }
+  saveSettings();
+  }
+
+
 void initSerial()
   {
   //This code was originally written as a generic switch monitor that could be used on any
@@ -840,16 +1081,16 @@ void initFS()
   else
     {
     Serial.println("File system started.");
-      Serial.println("Listing LittleFS contents:");
-    Dir dir = LittleFS.openDir("/"); // Open the root directory
-    while (dir.next())
-      {
-      Serial.print("  FILE: ");
-      Serial.print(dir.fileName());
-      Serial.print("  SIZE: ");
-      Serial.println(dir.fileSize());
-      }
-    Serial.println("-------------------------");
+    //   Serial.println("Listing LittleFS contents:");
+    // Dir dir = LittleFS.openDir("/"); // Open the root directory
+    // while (dir.next())
+    //   {
+    //   Serial.print("  FILE: ");
+    //   Serial.print(dir.fileName());
+    //   Serial.print("  SIZE: ");
+    //   Serial.println(dir.fileSize());
+    //   }
+    // Serial.println("-------------------------");
     }
 
   }
@@ -981,6 +1222,7 @@ void connectToWiFi()
         {
         Serial.print(".");
         lastDotTime = millis();
+        yield();
         }
       checkForCommand(); // Check for input in case something needs to be changed to work
       yield();
@@ -1006,10 +1248,20 @@ void initServer()
   connectToWiFi(); //will either connect to wifo or set up AP mode
   server.begin();
 
-  MDNS.addService("http", "tcp", 80);
   Serial.print("Setting MDNS name to ");
-  Serial.println(MDNS_DEFAULT_NAME);
-  MDNS.begin(MDNS_DEFAULT_NAME);
+  Serial.print(settings.mdnsName);
+  Serial.println(".local");
+
+  if (!MDNS.begin(settings.mdnsName)) // Always check return value!
+    {
+    Serial.println("Error setting up MDNS responder!");
+    }
+    else
+    {
+    Serial.println("mDNS responder started successfully.");
+    MDNS.addService("http", "tcp", 80); // Add service after mDNS is running
+    Serial.println("HTTP service added to mDNS.");
+    }  
   }
 
 void notFound(AsyncWebServerRequest *request) 
@@ -1023,7 +1275,24 @@ void setup()
   
   initSettings();
 
+  // initTopicForTesting(); //Remove this after first run
+  // erasePortsForTesting();  //remove this too
+  // for (int i=0;i<PORT_COUNT;i++)
+  //   {
+  //   Serial.print("Active:");
+  //   Serial.println(settings.ports[i].isActive?"true":"false");
+  //   Serial.print("GPIO:");
+  //   Serial.println(settings.ports[i].gpioNumber);
+  //   Serial.print("High Topic:");
+  //   Serial.println(settings.ports[i].highTopic);
+  //   Serial.print("Low Topic:");
+  //   Serial.println(settings.ports[i].lowTopic);
+  //   }
+
   initFS();
+ 
+  if (!settingsAreValid) //we need more settings, allow it via the web page
+    startAPMode();
 
   initServer();
 
@@ -1068,8 +1337,8 @@ void setup()
     //     Serial.println("Can't open file.");
     //     }
     //   }
-
-    request->send(LittleFS, "/index.html", String(), false, processor);
+    Serial.println("*********** Got web request ****************");
+    request->send(LittleFS, "/index.html", "text/html", false, processor);
     keepAwake=millis()+STAY_AWAKE_INCREMENT; //stay awake a little longer for more web changes
     });
 
@@ -1084,7 +1353,7 @@ void setup()
     //     Serial.printf("Form Data - Name: '%s', Value: '%s'\n", p->name().c_str(), p->value().c_str());
     //     }
     //   }
-
+    Serial.println("******************** Saving form **********************");
     bool changed=false; //starts out with nothing changed
 
     if (request->hasParam("ssid", true))
@@ -1174,7 +1443,7 @@ void setup()
       }
     if (request->hasParam("mdnsname", true))
       {
-      const char* val = request->getParam("mdnsnamer", true)->value().c_str();
+      const char* val = request->getParam("mdnsname", true)->value().c_str();
       if (strcmp(val, settings.mdnsName) != 0)  
         {
         snprintf(settings.mdnsName,sizeof(settings.mdnsName),"%s",val);
@@ -1233,6 +1502,333 @@ void setup()
       }
 
 
+    
+    //This is where we set the ports to use. Have to clear all of them out first
+    //because if the box is not checked, it won't show up in the request.
+    changed=true; //I guess this is always going to be the case
+    for (int i=0;i<PORT_COUNT;i++)
+      settings.ports[i].isActive=false;
+
+    //now process all of the ports in the request
+    // ------Port 0
+    port* thisPort=&settings.ports[0];
+    if (request->hasParam("useGpio0", true))
+      {
+      thisPort->isActive=true;
+      thisPort->gpioNumber=0;
+      if (request->hasParam("gpio0highval",true))
+        {
+        const char* val = request->getParam("gpio0highval", true)->value().c_str();
+        if (strlen(val)>0)
+          snprintf(thisPort->highTopic,sizeof(thisPort->highTopic),"%s",val);
+        else
+          strcpy(thisPort->highTopic,MQTT_DEFAULT_TOPIC_SUFFIX_HIGH);
+        }
+      if (request->hasParam("gpio0lowval",true))
+        {
+        const char* val = request->getParam("gpio0lowval", true)->value().c_str();
+        if (strlen(val)>0)
+          snprintf(thisPort->lowTopic,sizeof(thisPort->lowTopic),"%s",val);
+        else
+          strcpy(thisPort->lowTopic,MQTT_DEFAULT_TOPIC_SUFFIX_LOW);
+        }
+      }
+    else
+      {
+      thisPort->highTopic[0]='\0';
+      thisPort->lowTopic[0]='\0';
+      }
+      
+    // ------Port 1
+    thisPort=&settings.ports[1];
+    if (request->hasParam("useGpio1", true))
+      {
+      thisPort->isActive=true;
+      thisPort->gpioNumber=1;
+      if (request->hasParam("gpio1highval",true))
+        {
+        const char* val = request->getParam("gpio1highval", true)->value().c_str();
+        if (strlen(val)>0)
+          snprintf(thisPort->highTopic,sizeof(thisPort->highTopic),"%s",val);
+        else
+          strcpy(thisPort->highTopic,MQTT_DEFAULT_TOPIC_SUFFIX_HIGH);
+        }
+      if (request->hasParam("gpio1lowval",true))
+        {
+        const char* val = request->getParam("gpio1lowval", true)->value().c_str();
+        if (strlen(val)>0)
+          snprintf(thisPort->lowTopic,sizeof(thisPort->lowTopic),"%s",val);
+        else
+          strcpy(thisPort->lowTopic,MQTT_DEFAULT_TOPIC_SUFFIX_LOW);
+        }
+      }
+    else
+      {
+      thisPort->highTopic[1]='\0';
+      thisPort->lowTopic[1]='\0';
+      }
+      
+    // ------Port 2
+    thisPort=&settings.ports[2];
+    if (request->hasParam("useGpio2", true))
+      {
+      thisPort->isActive=true;
+      thisPort->gpioNumber=2;
+      if (request->hasParam("gpio2highval",true))
+        {
+        const char* val = request->getParam("gpio2highval", true)->value().c_str();
+        if (strlen(val)>0)
+          snprintf(thisPort->highTopic,sizeof(thisPort->highTopic),"%s",val);
+        else
+          strcpy(thisPort->highTopic,MQTT_DEFAULT_TOPIC_SUFFIX_HIGH);
+        }
+      if (request->hasParam("gpio2lowval",true))
+        {
+        const char* val = request->getParam("gpio2lowval", true)->value().c_str();
+        if (strlen(val)>0)
+          snprintf(thisPort->lowTopic,sizeof(thisPort->lowTopic),"%s",val);
+        else
+          strcpy(thisPort->lowTopic,MQTT_DEFAULT_TOPIC_SUFFIX_LOW);
+        }
+      }
+    else
+      {
+      thisPort->highTopic[2]='\0';
+      thisPort->lowTopic[2]='\0';
+      }
+       
+    // ------Port 3
+    thisPort=&settings.ports[3];
+    if (request->hasParam("useGpio3", true))
+      {
+      thisPort->isActive=true;
+      thisPort->gpioNumber=3;
+      if (request->hasParam("gpio3highval",true))
+        {
+        const char* val = request->getParam("gpio3highval", true)->value().c_str();
+        if (strlen(val)>0)
+          snprintf(thisPort->highTopic,sizeof(thisPort->highTopic),"%s",val);
+        else
+          strcpy(thisPort->highTopic,MQTT_DEFAULT_TOPIC_SUFFIX_HIGH);
+        }
+      if (request->hasParam("gpio3lowval",true))
+        {
+        const char* val = request->getParam("gpio3lowval", true)->value().c_str();
+        if (strlen(val)>0)
+          snprintf(thisPort->lowTopic,sizeof(thisPort->lowTopic),"%s",val);
+        else
+          strcpy(thisPort->lowTopic,MQTT_DEFAULT_TOPIC_SUFFIX_LOW);
+        }
+      }
+    else
+      {
+      thisPort->highTopic[3]='\0';
+      thisPort->lowTopic[3]='\0';
+      }
+       
+    // ------Port 4
+    thisPort=&settings.ports[4];
+    if (request->hasParam("useGpio4", true))
+      {
+      thisPort->isActive=true;
+      thisPort->gpioNumber=4;
+      if (request->hasParam("gpio4highval",true))
+        {
+        const char* val = request->getParam("gpio4highval", true)->value().c_str();
+        if (strlen(val)>0)
+          snprintf(thisPort->highTopic,sizeof(thisPort->highTopic),"%s",val);
+        else
+          strcpy(thisPort->highTopic,MQTT_DEFAULT_TOPIC_SUFFIX_HIGH);
+        }
+      if (request->hasParam("gpio4lowval",true))
+        {
+        const char* val = request->getParam("gpio4lowval", true)->value().c_str();
+        if (strlen(val)>0)
+          snprintf(thisPort->lowTopic,sizeof(thisPort->lowTopic),"%s",val);
+        else
+          strcpy(thisPort->lowTopic,MQTT_DEFAULT_TOPIC_SUFFIX_LOW);
+        }
+      }
+    else
+      {
+      thisPort->highTopic[4]='\0';
+      thisPort->lowTopic[4]='\0';
+      }
+       
+    // ------Port 5
+    thisPort=&settings.ports[5];
+    if (request->hasParam("useGpio5", true))
+      {
+      thisPort->isActive=true;
+      thisPort->gpioNumber=5;
+      if (request->hasParam("gpio5highval",true))
+        {
+        const char* val = request->getParam("gpio5highval", true)->value().c_str();
+        if (strlen(val)>0)
+          snprintf(thisPort->highTopic,sizeof(thisPort->highTopic),"%s",val);
+        else
+          strcpy(thisPort->highTopic,MQTT_DEFAULT_TOPIC_SUFFIX_HIGH);
+        }
+      if (request->hasParam("gpio5lowval",true))
+        {
+        const char* val = request->getParam("gpio5lowval", true)->value().c_str();
+        if (strlen(val)>0)
+          snprintf(thisPort->lowTopic,sizeof(thisPort->lowTopic),"%s",val);
+        else
+          strcpy(thisPort->lowTopic,MQTT_DEFAULT_TOPIC_SUFFIX_LOW);
+        }
+      }
+    else
+      {
+      thisPort->highTopic[5]='\0';
+      thisPort->lowTopic[5]='\0';
+      }
+       
+    // ------Port 12
+    thisPort=&settings.ports[6];
+    if (request->hasParam("useGpio12", true))
+      {
+      thisPort->isActive=true;
+      thisPort->gpioNumber=12;
+      if (request->hasParam("gpio12highval",true))
+        {
+        const char* val = request->getParam("gpio12highval", true)->value().c_str();
+        if (strlen(val)>0)
+          snprintf(thisPort->highTopic,sizeof(thisPort->highTopic),"%s",val);
+        else
+          strcpy(thisPort->highTopic,MQTT_DEFAULT_TOPIC_SUFFIX_HIGH);
+        }
+      if (request->hasParam("gpio12lowval",true))
+        {
+        const char* val = request->getParam("gpio12lowval", true)->value().c_str();
+        if (strlen(val)>0)
+          snprintf(thisPort->lowTopic,sizeof(thisPort->lowTopic),"%s",val);
+        else
+          strcpy(thisPort->lowTopic,MQTT_DEFAULT_TOPIC_SUFFIX_LOW);
+        }
+      }
+    else
+      {
+      thisPort->highTopic[6]='\0';
+      thisPort->lowTopic[6]='\0';
+      }
+       
+    // ------Port 13
+    thisPort=&settings.ports[7];
+    if (request->hasParam("useGpio13", true))
+      {
+      thisPort->isActive=true;
+      thisPort->gpioNumber=13;
+      if (request->hasParam("gpio13highval",true))
+        {
+        const char* val = request->getParam("gpio13highval", true)->value().c_str();
+        if (strlen(val)>0)
+          snprintf(thisPort->highTopic,sizeof(thisPort->highTopic),"%s",val);
+        else
+          strcpy(thisPort->highTopic,MQTT_DEFAULT_TOPIC_SUFFIX_HIGH);
+        }
+      if (request->hasParam("gpio13lowval",true))
+        {
+        const char* val = request->getParam("gpio13lowval", true)->value().c_str();
+        if (strlen(val)>0)
+          snprintf(thisPort->lowTopic,sizeof(thisPort->lowTopic),"%s",val);
+        else
+          strcpy(thisPort->lowTopic,MQTT_DEFAULT_TOPIC_SUFFIX_LOW);
+        }
+      }
+    else
+      {
+      thisPort->highTopic[7]='\0';
+      thisPort->lowTopic[7]='\0';
+      }
+       
+    // ------Port 14
+    thisPort=&settings.ports[8];
+    if (request->hasParam("useGpio14", true))
+      {
+      thisPort->isActive=true;
+      thisPort->gpioNumber=14;
+      if (request->hasParam("gpio14highval",true))
+        {
+        const char* val = request->getParam("gpio14highval", true)->value().c_str();
+        if (strlen(val)>0)
+          snprintf(thisPort->highTopic,sizeof(thisPort->highTopic),"%s",val);
+        else
+          strcpy(thisPort->highTopic,MQTT_DEFAULT_TOPIC_SUFFIX_HIGH);
+        }
+      if (request->hasParam("gpio14lowval",true))
+        {
+        const char* val = request->getParam("gpio14lowval", true)->value().c_str();
+        if (strlen(val)>0)
+          snprintf(thisPort->lowTopic,sizeof(thisPort->lowTopic),"%s",val);
+        else
+          strcpy(thisPort->lowTopic,MQTT_DEFAULT_TOPIC_SUFFIX_LOW);
+        }
+      }
+    else
+      {
+      thisPort->highTopic[8]='\0';
+      thisPort->lowTopic[8]='\0';
+      }
+       
+    // ------Port 15
+    thisPort=&settings.ports[9];
+    if (request->hasParam("useGpio15", true))
+      {
+      thisPort->isActive=true;
+      thisPort->gpioNumber=15;
+      if (request->hasParam("gpio15highval",true))
+        {
+        const char* val = request->getParam("gpio15highval", true)->value().c_str();
+        if (strlen(val)>0)
+          snprintf(thisPort->highTopic,sizeof(thisPort->highTopic),"%s",val);
+        else
+          strcpy(thisPort->highTopic,MQTT_DEFAULT_TOPIC_SUFFIX_HIGH);
+        }
+      if (request->hasParam("gpio15lowval",true))
+        {
+        const char* val = request->getParam("gpio15lowval", true)->value().c_str();
+        if (strlen(val)>0)
+          snprintf(thisPort->lowTopic,sizeof(thisPort->lowTopic),"%s",val);
+        else
+          strcpy(thisPort->lowTopic,MQTT_DEFAULT_TOPIC_SUFFIX_LOW);
+        }
+      }
+    else
+      {
+      thisPort->highTopic[9]='\0';
+      thisPort->lowTopic[9]='\0';
+      }
+        
+    // ------Port 16
+    thisPort=&settings.ports[10];
+    if (request->hasParam("useGpio16", true))
+      {
+      thisPort->isActive=true;
+      thisPort->gpioNumber=16;
+      if (request->hasParam("gpio16highval",true))
+        {
+        const char* val = request->getParam("gpio16highval", true)->value().c_str();
+        if (strlen(val)>0)
+          snprintf(thisPort->highTopic,sizeof(thisPort->highTopic),"%s",val);
+        else
+          strcpy(thisPort->highTopic,MQTT_DEFAULT_TOPIC_SUFFIX_HIGH);
+        }
+      if (request->hasParam("gpio16lowval",true))
+        {
+        const char* val = request->getParam("gpio16lowval", true)->value().c_str();
+        if (strlen(val)>0)
+          snprintf(thisPort->lowTopic,sizeof(thisPort->lowTopic),"%s",val);
+        else
+          strcpy(thisPort->lowTopic,MQTT_DEFAULT_TOPIC_SUFFIX_LOW);
+        }
+      }
+    else
+      {
+      thisPort->highTopic[10]='\0';
+      thisPort->lowTopic[10]='\0';
+      }
+    
     if (changed)
       {
       saveSettings();
@@ -1250,21 +1846,37 @@ void setup()
 
 void loop()
   {
+  static unsigned long lastLoopTime = 0;
+  unsigned long now = millis();
+  unsigned long duration = now - lastLoopTime;
+  lastLoopTime = now;
+  if (duration > 5)
+    Serial.printf("loop() gap: %lu ms\n", duration);
+  
+  
+  yield();
   if (settingsAreValid)
     {      
     if (WiFi.status() != WL_CONNECTED && !apModeActive)
       {
+      yield();
       connectToWiFi();
       }
     if (!mqttClient.connected() && WiFi.status() == WL_CONNECTED)
       {
+      yield();
       reconnectToBroker();
+      mqttClient.loop();
       }  
     else 
       mqttClient.loop();
     }
-
+  
+  MDNS.update();
+  yield();
+    
   checkForCommand();
+  yield(); //Very important! Web page won't load without this here.
 
   static unsigned long nextReport=0; //first report right away
 
@@ -1272,6 +1884,7 @@ void loop()
     {
     nextReport=millis()+STAY_AWAKE_MINIMUM_MS;
     report();
+    yield();
     }
 
   // Give someone a chance to change a setting before sleeping
@@ -1285,6 +1898,16 @@ void loop()
     Serial.println(" seconds");
     ESP.deepSleep(settings.reportInterval*1000000, WAKE_RF_DEFAULT); 
     }
+  }
+
+// Stack overflow hook to stop and let me know there's a crash.
+extern "C" void vApplicationStackOverflowHook(void* xTask, char *pcTaskName)
+  {
+  Serial.println("***********************************************");
+  Serial.print("Stack overflow in task: ");
+  Serial.println(pcTaskName);
+  Serial.println("***********************************************");
+  while (true);  // Halt so you can see the error
   }
 
 /*

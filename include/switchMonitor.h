@@ -8,6 +8,7 @@
 #define USERNAME_SIZE 50
 #define MQTT_CLIENTID_SIZE 25
 #define MQTT_TOPIC_SIZE 150
+#define MQTT_TOPIC_SUFFIX_SIZE 15
 #define MQTT_TOPIC_DISTANCE "distance"
 #define MQTT_TOPIC_BATTERY "battery"
 #define MQTT_TOPIC_ANALOG "analog"
@@ -25,7 +26,8 @@
 #define MQTT_PAYLOAD_STATUS_COMMAND "status" //show the most recent flow values
 #define MQTT_PAYLOAD_ARMED_STATUS "armed" //device has not triggered
 #define MQTT_PAYLOAD_TRIPPED_STATUS "tripped" //device has triggered
-#define JSON_STATUS_SIZE SSID_SIZE+PASSWORD_SIZE+USERNAME_SIZE+MQTT_TOPIC_SIZE+150 //+150 for associated field names, etc
+#define PORT_COUNT 11 //Eleven different ports can be configured
+#define JSON_STATUS_SIZE SSID_SIZE+PASSWORD_SIZE+USERNAME_SIZE+MQTT_TOPIC_SIZE+ADDRESS_SIZE+((MQTT_TOPIC_SUFFIX_SIZE*2)*PORT_COUNT)+250 //+250 for associated field names, etc
 #define PUBLISH_DELAY 400 //milliseconds to wait after publishing to MQTT to allow transaction to finish
 #define WIFI_TIMEOUT_SECONDS 30 // give up on wifi after this long
 #define FULL_BATTERY_COUNT 3686 //raw A0 count with a freshly charged 18650 lithium battery 
@@ -37,6 +39,8 @@
 #define STAY_AWAKE_MINIMUM_MS 30000 //When woken, it will wait at least this long before going back to sleep. Includes startup time.
 #define STAY_AWAKE_INCREMENT 60000  //Accessing the web page makes it stay awake this much longer
 #define MDNS_DEFAULT_NAME "mousetrap" //need to make this part of the configuration settings
+#define MQTT_DEFAULT_TOPIC_SUFFIX_HIGH "high" //suffix if not supplied
+#define MQTT_DEFAULT_TOPIC_SUFFIX_LOW "low" //suffix if not supplied
 
 void showSettings();
 String getConfigCommand();
