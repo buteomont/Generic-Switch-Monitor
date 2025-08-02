@@ -1060,10 +1060,10 @@ void initSerial()
   //the possibility of the pin being held low during boot, or you're programming a ESP8266-01s
   //for the first time, then comment out the 3 lines below and uncomment the 4th one.
 
-  Serial.begin(115200,SERIAL_8N1,SERIAL_TX_ONLY); 
-  pinMode(SWITCH_PIN, FUNCTION_3);
-  pinMode(settings.switchPort,INPUT_PULLUP);
-  //Serial.begin(115200);
+  // Serial.begin(115200,SERIAL_8N1,SERIAL_TX_ONLY); 
+  // pinMode(SWITCH_PIN, FUNCTION_3);
+  // pinMode(settings.switchPort,INPUT_PULLUP);
+  Serial.begin(115200);
 
   Serial.setTimeout(10000);
   
