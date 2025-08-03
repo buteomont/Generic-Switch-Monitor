@@ -13,26 +13,26 @@
   <form action="/save" method="POST">
     <h2>WiFi and Network</h2>
     <table border="0">
-      <tr><td>SSID:          </td><td><input name="ssid"          value="%ssid%" onchange="updateStuff()" />    </td><td>The router to which you want to connect          </td></tr>
-      <tr><td>WiFi Password: </td><td><input name="wifipass"      value="%wifipass%" onchange="updateStuff()" /></td><td>The password to the router                       </td></tr>
-      <tr><td>Static Address:</td><td><input name="address"       value="%address%" onchange="updateStuff()" /> </td><td>Optional. Will use DHCP if empty.                </td></tr>
-      <tr><td>Netmask:       </td><td><input name="netmask"       value="%netmask%" onchange="updateStuff()" /> </td><td>Optional. Only needed if static address is used. </td></tr>
+      <tr><td>SSID:          </td><td><input name="ssid"          value="%ssid%" maxlength="50" onchange="updateStuff()" />    </td><td>The router to which you want to connect          </td></tr>
+      <tr><td>WiFi Password: </td><td><input name="wifipass"      value="%wifipass%" maxlength="50" onchange="updateStuff()" /></td><td>The password to the router                       </td></tr>
+      <tr><td>Static Address:</td><td><input name="address"       value="%address%" maxlength="30" onchange="updateStuff()" /> </td><td>Optional. Will use DHCP if empty.                </td></tr>
+      <tr><td>Netmask:       </td><td><input name="netmask"       value="%netmask%" maxlength="30" onchange="updateStuff()" /> </td><td>Optional. Only needed if static address is used. </td></tr>
       </table>
 
     <h2>MQTT</h2>
     <table border="0">
-      <tr><td>Broker:    </td><td><input name="broker"        value="%broker%" onchange="updateStuff()" />   </td><td>The MQTT broker to which to send the reports.    </td></tr>
-      <tr><td>Port:      </td><td><input name="port"          value="%port%" onchange="updateStuff()" />     </td><td>The port of the MQTT broker (usually 1883).      </td></tr>
-      <tr><td>Topic Root:</td><td><input name="topicroot"     value="%topicroot%" onchange="updateStuff()" /></td><td>The root of the MQTT topic. Must end with /.     </td></tr>
-      <tr><td>User:      </td><td><input name="user"          value="%user%" onchange="updateStuff()" />     </td><td>This is the userid for MQTT. Leave blank if none.</td></tr>
-      <tr><td>Password:  </td><td><input name="pass"          value="%pass%" onchange="updateStuff()" />     </td><td>The password for the above user.                 </td></tr>
+      <tr><td>Broker:    </td><td><input name="broker"        value="%broker%" maxlength="50" onchange="updateStuff()" />   </td><td>The MQTT broker to which to send the reports.    </td></tr>
+      <tr><td>Port:      </td><td><input name="port"          value="%port%" maxlength="5" onchange="updateStuff()" />     </td><td>The port of the MQTT broker (usually 1883).      </td></tr>
+      <tr><td>Topic Root:</td><td><input name="topicroot"     value="%topicroot%" maxlength="100" onchange="updateStuff()" /></td><td>The root of the MQTT topic. Must end with /.     </td></tr>
+      <tr><td>User:      </td><td><input name="user"          value="%user%" maxlength="50" onchange="updateStuff()" />     </td><td>This is the userid for MQTT. Leave blank if none.</td></tr>
+      <tr><td>Password:  </td><td><input name="pass"          value="%pass%" maxlength="50" onchange="updateStuff()" />     </td><td>The password for the above user.                 </td></tr>
       </table>
 
     <h2>Controls</h2>
     <table border="0">
       <tr><td>Debug Flag:     </td><td><input type="checkbox" name="debug" value="1" %debugChecked% onchange="updateStuff()" /></td><td>If checked, prints diagnostic info to the serial port.</td></tr>
-      <tr><td>Report Interval:</td><td><input name="reportinterval" value="%reportinterval%" onchange="updateStuff()" />     </td><td>How often in seconds to issue a status report. Processor will sleep between reports.</td></tr>
-      <tr><td>MDNS Name:      </td><td><input name="mdnsname" value="%mdnsname%" onchange="updateStuff()" />     </td><td>Use this name followed by ".local" to access this web page (e.g., mousetrap.local)</td></tr>
+      <tr><td>Report Interval:</td><td><input name="reportinterval" value="%reportinterval%" maxlength="5" onchange="updateStuff()" />     </td><td>How often in seconds to issue a status report. Processor will sleep between reports.</td></tr>
+      <tr><td>MDNS Name:      </td><td><input name="mdnsname" value="%mdnsname%" maxlength="20" onchange="updateStuff()" />     </td><td>Use this name followed by ".local" to access this web page (e.g., mousetrap.local)</td></tr>
       </table>
 
     <h2>Monitored Ports</h2>
@@ -48,88 +48,88 @@
       <tr>
         <td align="left"><input type="checkbox" name="useGpio0" value="1" %gpio0Checked% onchange="updateStuff()" /></td>
         <td>&nbsp;0 (D3)</td>
-        <td align="left"><input name="gpio0highval" value="%gpio0highval%" onchange="updateStuff()" /></td>
-        <td align="left"><input name="gpio0lowval" value="%gpio0lowval%" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio0highval" value="%gpio0highval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio0lowval" value="%gpio0lowval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
         <td align="left"><input type="checkbox" name="usePullup0" value="1" %pullup0Checked% onchange="updateStuff()" /></td>
         <td align="left">Must be HIGH for normal boot.</td>
         </tr>
       <tr>
         <td align="left"><input type="checkbox" name="useGpio1" value="1" %gpio1Checked% onchange="updateStuff()" /></td>
         <td>&nbsp;1 (TX)</td>
-        <td align="left"><input name="gpio1highval" value="%gpio1highval%" onchange="updateStuff()" /></td>
-        <td align="left"><input name="gpio1lowval" value="%gpio1lowval%" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio1highval" value="%gpio1highval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio1lowval" value="%gpio1lowval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
         <td align="left"><input type="checkbox" name="usePullup1" value="1" %pullup1Checked% onchange="updateStuff()" /></td>
-        <td align="left">Used for serial TX. Must be HIGH for normal boot. Transmit on UART is disabled if using this port.</td>
+        <td align="left">Used for serial TX. Must be HIGH for normal boot. UART transmit is disabled if this port is used.</td>
         </tr>
       <tr>
         <td align="left"><input type="checkbox" name="useGpio2" value="1" %gpio2Checked% onchange="updateStuff()" /></td>
         <td>&nbsp;2 (D4)</td>
-        <td align="left"><input name="gpio2highval" value="%gpio2highval%" onchange="updateStuff()" /></td>
-        <td align="left"><input name="gpio2lowval" value="%gpio2lowval%" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio2highval" value="%gpio2highval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio2lowval" value="%gpio2lowval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
         <td align="left"><input type="checkbox" name="usePullup2" value="1" %pullup2Checked% onchange="updateStuff()" /></td>
         <td align="left">Must be HIGH for normal boot. Connected to built-in LED.</td>
         </tr>
       <tr>
         <td align="left"><input type="checkbox" name="useGpio3" value="1" %gpio3Checked% onchange="updateStuff()" /></td>
         <td>&nbsp;3 (RX)</td>
-        <td align="left"><input name="gpio3highval" value="%gpio3highval%" onchange="updateStuff()" /></td>
-        <td align="left"><input name="gpio3lowval" value="%gpio3lowval%" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio3highval" value="%gpio3highval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio3lowval" value="%gpio3lowval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
         <td align="left"><input type="checkbox" name="usePullup3" value="1" %pullup3Checked% onchange="updateStuff()" /></td>
-        <td align="left">Used for serial receive. Receive on UART is disabled if using this port.</td>
+        <td align="left">Used for serial receive. UART receive is disabled if this port is used.</td>
         </tr>
       <tr>
         <td align="left"><input type="checkbox" name="useGpio4" value="1" %gpio4Checked% onchange="updateStuff()" /></td>
         <td>&nbsp;4 (D2)</td>
-        <td align="left"><input name="gpio4highval" value="%gpio4highval%" onchange="updateStuff()" /></td>
-        <td align="left"><input name="gpio4lowval" value="%gpio4lowval%" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio4highval" value="%gpio4highval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio4lowval" value="%gpio4lowval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
         <td align="left"><input type="checkbox" name="usePullup4" value="1" %pullup4Checked% onchange="updateStuff()" /></td>
         <td align="left">Also used as default I2C SCL (clock).</td>
         </tr>
        <tr>
         <td align="left"><input type="checkbox" name="useGpio5" value="1" %gpio5Checked% onchange="updateStuff()" /></td>
         <td>&nbsp;5 (D1)</td>
-        <td align="left"><input name="gpio5highval" value="%gpio5highval%" onchange="updateStuff()" /></td>
-        <td align="left"><input name="gpio5lowval" value="%gpio5lowval%" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio5highval" value="%gpio5highval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio5lowval" value="%gpio5lowval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
         <td align="left"><input type="checkbox" name="usePullup5" value="1" %pullup5Checked% onchange="updateStuff()" /></td>
         <td align="left">Also used as default I2C SDA (data).</td>
         </tr>
        <tr>
         <td align="left"><input type="checkbox" name="useGpio12" value="1" %gpio12Checked% onchange="updateStuff()" /></td>
         <td>&nbsp;12 (D6)</td>
-        <td align="left"><input name="gpio12highval" value="%gpio12highval%" onchange="updateStuff()" /></td>
-        <td align="left"><input name="gpio12lowval" value="%gpio12lowval%" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio12highval" value="%gpio12highval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio12lowval" value="%gpio12lowval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
         <td align="left"><input type="checkbox" name="usePullup12" value="1" %pullup12Checked% onchange="updateStuff()" /></td>
         <td align="left">Also used as default SPI MISO.</td>
         </tr>
        <tr>
         <td align="left"><input type="checkbox" name="useGpio13" value="1" %gpio13Checked% onchange="updateStuff()" /></td>
         <td>&nbsp;13 (D7)</td>
-        <td align="left"><input name="gpio13highval" value="%gpio13highval%" onchange="updateStuff()" /></td>
-        <td align="left"><input name="gpio13lowval" value="%gpio13lowval%" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio13highval" value="%gpio13highval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio13lowval" value="%gpio13lowval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
         <td align="left"><input type="checkbox" name="usePullup13" value="1" %pullup13Checked% onchange="updateStuff()" /></td>
         <td align="left">Also used as default SPI MOSI.</td>
         </tr>
        <tr>
         <td align="left"><input type="checkbox" name="useGpio14" value="1" %gpio14Checked% onchange="updateStuff()" /></td>
         <td>&nbsp;14 (D5)</td>
-        <td align="left"><input name="gpio14highval" value="%gpio14highval%" onchange="updateStuff()" /></td>
-        <td align="left"><input name="gpio14lowval" value="%gpio14lowval%" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio14highval" value="%gpio14highval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio14lowval" value="%gpio14lowval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
         <td align="left"><input type="checkbox" name="usePullup14" value="1" %pullup14Checked% onchange="updateStuff()" /></td>
         <td align="left">Also used as default SPI SCK.</td>
         </tr>
        <tr>
         <td align="left"><input type="checkbox" name="useGpio15" value="1" %gpio15Checked% onchange="updateStuff()" /></td>
         <td>&nbsp;15 (D8)</td>
-        <td align="left"><input name="gpio15highval" value="%gpio15highval%" onchange="updateStuff()" /></td>
-        <td align="left"><input name="gpio15lowval" value="%gpio15lowval%" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio15highval" value="%gpio15highval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio15lowval" value="%gpio15lowval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
         <td align="left"><input type="checkbox" name="usePullup15" value="1" %pullup15Checked% onchange="updateStuff()" /></td>
         <td align="left">Must be low when booting. Also used as default SPI CS.</td>
         </tr>
        <tr>
         <td align="left"><input type="checkbox" name="useGpio16" value="1" %gpio16Checked% onchange="updateStuff()" /></td>
         <td>&nbsp;16 (D0)</td>
-        <td align="left"><input name="gpio16highval" value="%gpio16highval%" onchange="updateStuff()" /></td>
-        <td align="left"><input name="gpio16lowval" value="%gpio16lowval%" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio16highval" value="%gpio16highval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio16lowval" value="%gpio16lowval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
         <td align="left"><input type="checkbox" name="usePullup16" value="1" %pullup16Checked% onchange="updateStuff()" /></td>
         <td align="left">Used to wake up CPU from deep sleep when tied to the reset line.</td>
         </tr>

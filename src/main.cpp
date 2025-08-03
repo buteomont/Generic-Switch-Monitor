@@ -334,186 +334,196 @@ String getConfigCommand()
 bool processCommand(String cmd)
   {
   bool commandFound=true; //saves a lot of code
-  char nme[30]; //shouldn't get any commands larger than this
+  char nme[MAX_COMMAND_SIZE]; //shouldn't get any commands larger than this
   const char *str=cmd.c_str();
   char *val=NULL;
   char *nme_t=strtok((char *)str,"=");
-  strcpy(nme,nme_t);//Don't modify c_str() pointers
-  if (nme_t!=NULL)
-    val=strtok(NULL,"=");
-  else
-    strcpy(nme,"\n"); 
-  
-  if (nme[0]=='\n' || nme[0]=='\r' || nme[0]=='\0') //a single cr means show current settings
+  if (strlen(nme_t)<MAX_COMMAND_SIZE)
     {
-    showSettings();
-    commandFound=false; //command not found
-    }
-  else
-    {
-    //Get rid of the carriage return
-    if (val!=NULL && strlen(val)>0 && val[strlen(val)-1]==13)
-      val[strlen(val)-1]=0; 
-
-    if (val!=NULL)
+    strcpy(nme,nme_t);//Don't modify c_str() pointers
+    if (nme_t!=NULL)
+      val=strtok(NULL,"=");
+    else
+      strcpy(nme,"\n"); 
+    
+    if (nme[0]=='\n' || nme[0]=='\r' || nme[0]=='\0') //a single cr means show current settings
       {
-      if (strcmp(val,"NULL")==0) //to nullify a value, you have to really mean it
-        {
-        strcpy(val,"");
-        }
-      
-      if (strcmp(nme,"broker")==0)
-        {
-        strcpy(settings.mqttBrokerAddress,val);
-        saveSettings();
-        }
-      else if (strcmp(nme,"port")==0)
-        {
-        if (!val)
-          strcpy(val,"0");
-        settings.mqttBrokerPort=atoi(val);
-        saveSettings();
-        }
-      else if (strcmp(nme,"topicroot")==0)
-        {
-        strcpy(settings.mqttTopicRoot,val);
-        if (val[strlen(val)-1] !='/') // must end with a /
-          {
-          strcat(settings.mqttTopicRoot,"/");
-          }
-        saveSettings();
-        }
-      else if (strcmp(nme,"user")==0)
-        {
-        strcpy(settings.mqttUsername,val);
-        saveSettings();
-        }
-      else if (strcmp(nme,"pass")==0)
-        {
-        strcpy(settings.mqttPassword,val);
-        saveSettings();
-        }
-      else if (strcmp(nme,"ssid")==0)
-        {
-        strcpy(settings.ssid,val);
-        saveSettings();
-        }
-      else if (strcmp(nme,"wifipass")==0)
-        {
-        strcpy(settings.wifiPassword,val);
-        saveSettings();
-        }
-      else if (strcmp(nme,"address")==0)
-        {
-        strcpy(settings.address,val);
-        saveSettings();
-        }
-      else if (strcmp(nme,"mdnsname")==0)
-        {
-        strcpy(settings.mdnsName,val);
-        saveSettings();
-        }
-      else if (strcmp(nme,"netmask")==0)
-        {
-        strcpy(settings.netmask,val);
-        saveSettings();
-        }
-      else if (strcmp(nme,"debug")==0)
-        {
-        if (!val)
-          strcpy(val,"0");
-        settings.debug=atoi(val)==1?true:false;
-        saveSettings();
-        }
-      else if (strcmp(nme,"reportinterval")==0)
-        {
-        if (!val)
-          strcpy(val,"0");
-        settings.reportInterval=atoi(val);
-        saveSettings();
-        }
+      showSettings();
+      commandFound=false; //command not found
+      }
+    else
+      {
+      //Get rid of the carriage return
+      if (val!=NULL && strlen(val)>0 && val[strlen(val)-1]==13)
+        val[strlen(val)-1]=0; 
 
-      // "portadd=gpio,highmessage,lowmessage,usePullup" should add a port
-      else if (strcmp(nme,"portadd")==0)
+      if (val!=NULL)
         {
-        if (val)
+        if (strcmp(val,"NULL")==0) //to nullify a value, you have to really mean it
           {
-          char *portnum=strtok(val,",");
-          char *hitopic=strtok(NULL,",");
-          char *lotopic=strtok(NULL,",");
-          char *usePullup=strtok(NULL,",");
-          uint8_t port=atoi(portnum);
-          int8_t index=portIndex(port);
-          if (index>=0)
+          strcpy(val,"");
+          }
+        
+        if (strcmp(nme,"broker")==0)
+          {
+          strcpy(settings.mqttBrokerAddress,val);
+          saveSettings();
+          }
+        else if (strcmp(nme,"port")==0)
+          {
+          if (!val)
+            strcpy(val,"0");
+          settings.mqttBrokerPort=atoi(val);
+          saveSettings();
+          }
+        else if (strcmp(nme,"topicroot")==0)
+          {
+          strcpy(settings.mqttTopicRoot,val);
+          if (val[strlen(val)-1] !='/') // must end with a /
             {
-            settings.ports[index].isActive=true;
-            settings.ports[index].gpioNumber=port;
-            if (hitopic)
-              {  
-              strncpy(settings.ports[index].highMessage,hitopic,MQTT_TOPIC_SUFFIX_SIZE-1);
-              settings.ports[index].highMessage[MQTT_TOPIC_SUFFIX_SIZE-1]='\0'; //ensure null termination
+            strcat(settings.mqttTopicRoot,"/");
+            }
+          saveSettings();
+          }
+        else if (strcmp(nme,"user")==0)
+          {
+          strcpy(settings.mqttUsername,val);
+          saveSettings();
+          }
+        else if (strcmp(nme,"pass")==0)
+          {
+          strcpy(settings.mqttPassword,val);
+          saveSettings();
+          }
+        else if (strcmp(nme,"ssid")==0)
+          {
+          strcpy(settings.ssid,val);
+          saveSettings();
+          }
+        else if (strcmp(nme,"wifipass")==0)
+          {
+          strcpy(settings.wifiPassword,val);
+          saveSettings();
+          }
+        else if (strcmp(nme,"address")==0)
+          {
+          strcpy(settings.address,val);
+          saveSettings();
+          }
+        else if (strcmp(nme,"mdnsname")==0)
+          {
+          strcpy(settings.mdnsName,val);
+          saveSettings();
+          }
+        else if (strcmp(nme,"netmask")==0)
+          {
+          strcpy(settings.netmask,val);
+          saveSettings();
+          }
+        else if (strcmp(nme,"debug")==0)
+          {
+          if (!val)
+            strcpy(val,"0");
+          settings.debug=atoi(val)==1?true:false;
+          saveSettings();
+          }
+        else if (strcmp(nme,"reportinterval")==0)
+          {
+          if (!val)
+            strcpy(val,"0");
+          settings.reportInterval=atoi(val);
+          saveSettings();
+          }
+
+        // "portadd=gpio,highmessage,lowmessage,usePullup" should add a port
+        else if (strcmp(nme,"portadd")==0)
+          {
+          if (val)
+            {
+            char *portnum=strtok(val,",");
+            char *hitopic=strtok(NULL,",");
+            char *lotopic=strtok(NULL,",");
+            char *usePullup=strtok(NULL,",");
+            uint8_t port=atoi(portnum);
+            int8_t index=portIndex(port);
+            if (index>=0)
+              {
+              settings.ports[index].isActive=true;
+              settings.ports[index].gpioNumber=port;
+              if (hitopic)
+                {  
+                strncpy(settings.ports[index].highMessage,hitopic,MQTT_TOPIC_SUFFIX_SIZE-1);
+                settings.ports[index].highMessage[MQTT_TOPIC_SUFFIX_SIZE-1]='\0'; //ensure null termination
+                }
+              else
+                strcpy(settings.ports[index].highMessage,"high");
+
+              if (lotopic)
+                {  
+                strncpy(settings.ports[index].lowMessage,lotopic,MQTT_TOPIC_SUFFIX_SIZE-1);
+                settings.ports[index].lowMessage[MQTT_TOPIC_SUFFIX_SIZE-1]='\0'; //ensure null termination
+                }
+              else
+                strcpy(settings.ports[index].lowMessage,"low");
+
+              if (usePullup)
+                settings.ports[index].usePullup=true;
+              else
+                settings.ports[index].usePullup=false;
+
+              saveSettings();
               }
             else
-              strcpy(settings.ports[index].highMessage,"high");
+              commandFound=false;
+            }
+          }
 
-            if (lotopic)
-              {  
-              strncpy(settings.ports[index].lowMessage,lotopic,MQTT_TOPIC_SUFFIX_SIZE-1);
-              settings.ports[index].lowMessage[MQTT_TOPIC_SUFFIX_SIZE-1]='\0'; //ensure null termination
+        // "portremove=gpio" should remove a port
+      else if (strcmp(nme,"portremove")==0)
+          {
+          if (val)
+            {
+            uint8_t port=atoi(val);
+            int8_t index=portIndex(port);
+            if (index>=0)
+              {
+              settings.ports[index].isActive=false;
+              saveSettings();
               }
             else
-              strcpy(settings.ports[index].lowMessage,"low");
-
-            if (usePullup)
-              settings.ports[index].usePullup=true;
-            else
-              settings.ports[index].usePullup=false;
-
-            saveSettings();
+              commandFound=false;
             }
-          else
-            commandFound=false;
           }
-        }
 
-      // "portremove=gpio" should remove a port
-     else if (strcmp(nme,"portremove")==0)
-        {
-        if (val)
+        else if ((strcmp(nme,"resetmqttid")==0)&& (strcmp(val,"yes")==0))
           {
-          uint8_t port=atoi(val);
-          int8_t index=portIndex(port);
-          if (index>=0)
-            {
-            settings.ports[index].isActive=false;
-            saveSettings();
-            }
-          else
-            commandFound=false;
+          generateMqttClientId(settings.mqttClientId);
+          saveSettings();
           }
-        }
-
-      else if ((strcmp(nme,"resetmqttid")==0)&& (strcmp(val,"yes")==0))
-        {
-        generateMqttClientId(settings.mqttClientId);
-        saveSettings();
-        }
-      else if ((strcmp(nme,"factorydefaults")==0) && (strcmp(val,"yes")==0)) //reset all eeprom settings
-        {
-        Serial.println("\n*********************** Resetting EEPROM Values ************************");
-        initializeSettings();
-        saveSettings();
-        delay(2000);
-        ESP.restart();
-        }
-      else
-        {
-        showSettings();
-        commandFound=false; //command not found
+        else if ((strcmp(nme,"factorydefaults")==0) && (strcmp(val,"yes")==0)) //reset all eeprom settings
+          {
+          Serial.println("\n*********************** Resetting EEPROM Values ************************");
+          initializeSettings();
+          saveSettings();
+          delay(2000);
+          ESP.restart();
+          }
+        else
+          {
+          showSettings();
+          commandFound=false; //command not found
+          }
         }
       }
+    keepAwake=millis()+STAY_AWAKE_INCREMENT; //stay awake a little longer for more web changes
     }
-  keepAwake=millis()+STAY_AWAKE_INCREMENT; //stay awake a little longer for more web changes
+  else
+    {
+    Serial.print("Incoming command too large: ");
+    Serial.println(nme_t);
+    commandFound=false;
+    }
+
   return commandFound;
   }
 
@@ -562,11 +572,7 @@ bool report()
 
   strcpy(topic,settings.mqttTopicRoot);
   strcat(topic,MQTT_PAYLOAD_STATUS_COMMAND);
-  // bool switchStatus=digitalRead(settings.switchPort);
-  // if (switchStatus!=settings.activeLow) //means the device has triggered (activeLow=1)
-  //   publish(topic,MQTT_PAYLOAD_TRIPPED_STATUS,true);
-  // else
-  //   publish(topic,MQTT_PAYLOAD_ARMED_STATUS,true);
+
   for (int i=0;i<PORT_COUNT;i++)
     {
     if (settings.ports[i].isActive)
@@ -575,12 +581,14 @@ bool report()
       publish(topic,switchStatus?settings.ports[i].highMessage:settings.ports[i].lowMessage,false);
       }
     }
+  yield();
 
   //publish the radio strength reading while we're at it
   strcpy(topic,settings.mqttTopicRoot);
   strcat(topic,MQTT_TOPIC_RSSI);
   sprintf(reading,"%d",WiFi.RSSI()); 
   ok=ok & publish(topic,reading,true); //retain
+  yield();
 
   //publish the battery voltage
   uint32_t vccMilliVolts = ESP.getVcc(); // millivolts
@@ -589,6 +597,7 @@ bool report()
   strcat(topic,MQTT_TOPIC_BATTERY);
   sprintf(reading,"%.2f",vccVolts); 
   ok=ok & publish(topic,reading,true); //retain
+  yield();
 
   // Publish some memory usage info
   uint32_t freeHeap = ESP.getFreeHeap();
@@ -596,18 +605,21 @@ bool report()
   strcat(topic,MQTT_TOPIC_FREE_HEAP);
   sprintf(reading,"%d",freeHeap); 
   ok=ok & publish(topic,reading,true); //retain
+  yield();
 
   uint8_t heapFragmentation = ESP.getHeapFragmentation(); // Returns a percentage (0-100)
   strcpy(topic,settings.mqttTopicRoot);
   strcat(topic,MQTT_TOPIC_HEAP_FRAGMENTATION);
   sprintf(reading,"%d%%",heapFragmentation); 
   ok=ok & publish(topic,reading,true); //retain
+  yield();
 
   uint32_t maxFreeBlockSize = ESP.getMaxFreeBlockSize();
   strcpy(topic,settings.mqttTopicRoot);
   strcat(topic,MQTT_TOPIC_MAX_FREE_BLOCK_SIZE);
   sprintf(reading,"%d",maxFreeBlockSize); 
   ok=ok & publish(topic,reading,true); //retain
+  yield();
   
   if (settings.debug)
     {
@@ -664,122 +676,127 @@ void incomingMqttHandler(char* reqTopic, byte* payload, unsigned int length)
     {
     Serial.println("====================================> Callback works.");
     }
-  payload[length]='\0'; //this should have been done in the calling code, shouldn't have to do it here
   boolean rebootScheduled=false; //so we can reboot after sending the reboot response
-  char charbuf[100];
-  sprintf(charbuf,"%s",payload);
-  const char* response;
-  
-  
-  //if the command is MQTT_PAYLOAD_SETTINGS_COMMAND, send all of the settings
-  if (strcmp(charbuf,MQTT_PAYLOAD_SETTINGS_COMMAND)==0)
+  char charbuf[MQTT_MAX_INCOMING_PAYLOAD_SIZE];
+  if (length < MQTT_MAX_INCOMING_PAYLOAD_SIZE)
     {
-    char tempbuf[35]; //for converting numbers to strings
-    char jsonStatus[JSON_STATUS_SIZE];
+    payload[length]='\0'; //this should have been done in the calling code, shouldn't have to do it here
+    sprintf(charbuf,"%s",payload);
+    const char* response;
     
-    strcpy(jsonStatus,"{");
-    strcat(jsonStatus,"\"broker\":\"");
-    strcat(jsonStatus,settings.mqttBrokerAddress);
-    strcat(jsonStatus,"\", \"port\":");
-    sprintf(tempbuf,"%d",settings.mqttBrokerPort);
-    strcat(jsonStatus,tempbuf);
-    strcat(jsonStatus,", \"topicroot\":\"");
-    strcat(jsonStatus,settings.mqttTopicRoot);
-    strcat(jsonStatus,"\", \"user\":\"");
-    strcat(jsonStatus,settings.mqttUsername);
-    strcat(jsonStatus,"\", \"pass\":\"");
-    strcat(jsonStatus,settings.mqttPassword);
-    strcat(jsonStatus,"\", \"ssid\":\"");
-    strcat(jsonStatus,settings.ssid);
-    strcat(jsonStatus,"\", \"wifipass\":\"");
-    strcat(jsonStatus,settings.wifiPassword);
-    strcat(jsonStatus,"\", \"mqttClientId\":\"");
-    strcat(jsonStatus,settings.mqttClientId);
-    strcat(jsonStatus,"\", \"address\":\"");
-    strcat(jsonStatus,settings.address);
-    strcat(jsonStatus,"\", \"netmask\":\"");
-    strcat(jsonStatus,settings.netmask);
-    strcat(jsonStatus,"\", \"mdnsname\":\"");
-    strcat(jsonStatus,settings.mdnsName);
-    strcat(jsonStatus,"\", \"debug\":\"");
-    strcat(jsonStatus,settings.debug?"true":"false");
-    strcat(jsonStatus,"\", \"reportinterval\":");
-    sprintf(tempbuf,"%lu",settings.reportInterval);
-    strcat(jsonStatus,tempbuf);
-    strcat(jsonStatus,", \"IPAddress\":\"");
-    strcat(jsonStatus,wifiClient.localIP().toString().c_str());
-    strcat(jsonStatus,"\",");
-    strcat(jsonStatus,"\"ports\":[");
-    for (int i=0;i<PORT_COUNT;i++)
+    
+    //if the command is MQTT_PAYLOAD_SETTINGS_COMMAND, send all of the settings
+    if (strcmp(charbuf,MQTT_PAYLOAD_SETTINGS_COMMAND)==0)
       {
-      if (settings.ports[i].isActive)
+      char tempbuf[35]; //for converting numbers to strings
+      char jsonStatus[JSON_STATUS_SIZE];
+      
+      strcpy(jsonStatus,"{");
+      strcat(jsonStatus,"\"broker\":\"");
+      strcat(jsonStatus,settings.mqttBrokerAddress);
+      strcat(jsonStatus,"\", \"port\":");
+      sprintf(tempbuf,"%d",settings.mqttBrokerPort);
+      strcat(jsonStatus,tempbuf);
+      strcat(jsonStatus,", \"topicroot\":\"");
+      strcat(jsonStatus,settings.mqttTopicRoot);
+      strcat(jsonStatus,"\", \"user\":\"");
+      strcat(jsonStatus,settings.mqttUsername);
+      strcat(jsonStatus,"\", \"pass\":\"");
+      strcat(jsonStatus,settings.mqttPassword);
+      strcat(jsonStatus,"\", \"ssid\":\"");
+      strcat(jsonStatus,settings.ssid);
+      strcat(jsonStatus,"\", \"wifipass\":\"");
+      strcat(jsonStatus,settings.wifiPassword);
+      strcat(jsonStatus,"\", \"mqttClientId\":\"");
+      strcat(jsonStatus,settings.mqttClientId);
+      strcat(jsonStatus,"\", \"address\":\"");
+      strcat(jsonStatus,settings.address);
+      strcat(jsonStatus,"\", \"netmask\":\"");
+      strcat(jsonStatus,settings.netmask);
+      strcat(jsonStatus,"\", \"mdnsname\":\"");
+      strcat(jsonStatus,settings.mdnsName);
+      strcat(jsonStatus,"\", \"debug\":\"");
+      strcat(jsonStatus,settings.debug?"true":"false");
+      strcat(jsonStatus,"\", \"reportinterval\":");
+      sprintf(tempbuf,"%lu",settings.reportInterval);
+      strcat(jsonStatus,tempbuf);
+      strcat(jsonStatus,", \"IPAddress\":\"");
+      strcat(jsonStatus,wifiClient.localIP().toString().c_str());
+      strcat(jsonStatus,"\",");
+      strcat(jsonStatus,"\"ports\":[");
+      for (int i=0;i<PORT_COUNT;i++)
         {
-        strcat(jsonStatus,"{\"GPIO\":");
-        sprintf(tempbuf,"%d",settings.ports[i].gpioNumber);
-        strcat(jsonStatus,tempbuf);
-        strcat(jsonStatus,", \"highmessage\":\"");
-        strcat(jsonStatus,settings.ports[i].highMessage);
-        strcat(jsonStatus,"\", \"lowmessage\":\"");
-        strcat(jsonStatus,settings.ports[i].lowMessage);
-        strcat(jsonStatus,"\", \"usePullup\":\"");
-        strcat(jsonStatus,settings.ports[i].usePullup?"true":"false");
-        strcat(jsonStatus,"\"},");
+        if (settings.ports[i].isActive)
+          {
+          strcat(jsonStatus,"{\"GPIO\":");
+          sprintf(tempbuf,"%d",settings.ports[i].gpioNumber);
+          strcat(jsonStatus,tempbuf);
+          strcat(jsonStatus,", \"highmessage\":\"");
+          strcat(jsonStatus,settings.ports[i].highMessage);
+          strcat(jsonStatus,"\", \"lowmessage\":\"");
+          strcat(jsonStatus,settings.ports[i].lowMessage);
+          strcat(jsonStatus,"\", \"usePullup\":\"");
+          strcat(jsonStatus,settings.ports[i].usePullup?"true":"false");
+          strcat(jsonStatus,"\"},");
+          }
+        yield();
         }
-      yield();
+      size_t len = strlen(jsonStatus);
+      if (jsonStatus[len - 1] == ',')
+        jsonStatus[len - 1] = ']';   //replace the last comma to close the array
+      else
+        strcat(jsonStatus,"]"); //happens when port array is empty
+      
+      strcat(jsonStatus,"}");
+      response=jsonStatus;
       }
-    size_t len = strlen(jsonStatus);
-    if (jsonStatus[len - 1] == ',')
-      jsonStatus[len - 1] = ']';   //replace the last comma to close the array
+    else if (strcmp(charbuf,MQTT_PAYLOAD_VERSION_COMMAND)==0) //show the version number
+      {
+      char tmp[15];
+      strcpy(tmp,VERSION);
+      response=tmp;
+      }
+    else if (strcmp(charbuf,MQTT_PAYLOAD_STATUS_COMMAND)==0) //show the latest value
+      {
+      report();
+      char tmp[25];
+      strcpy(tmp,"Status report complete");
+      response=tmp;
+      }
+    else if (strcmp(charbuf,MQTT_PAYLOAD_REBOOT_COMMAND)==0) //reboot the controller
+      {
+      char tmp[10];
+      strcpy(tmp,"REBOOTING");
+      response=tmp;
+      rebootScheduled=true;
+      }
+    else if (processCommand(charbuf))
+      {
+      response="OK";
+      }
     else
-      strcat(jsonStatus,"]"); //happens when port array is empty
+      {
+      char badCmd[18];
+      strcpy(badCmd,"(empty)");
+      response=badCmd;
+      }
+      
+    char topic[MQTT_TOPIC_SIZE];
+    strcpy(topic,settings.mqttTopicRoot);
+    strcat(topic,charbuf); //the incoming command becomes the topic suffix
+
+    if (!publish(topic,response,false)) //do not retain
+      Serial.println("************ Failure when publishing status response!");
+      
+    delay(2000); //give publish time to complete
     
-    strcat(jsonStatus,"}");
-    response=jsonStatus;
-    }
-  else if (strcmp(charbuf,MQTT_PAYLOAD_VERSION_COMMAND)==0) //show the version number
-    {
-    char tmp[15];
-    strcpy(tmp,VERSION);
-    response=tmp;
-    }
-  else if (strcmp(charbuf,MQTT_PAYLOAD_STATUS_COMMAND)==0) //show the latest value
-    {
-    report();
-    char tmp[25];
-    strcpy(tmp,"Status report complete");
-    response=tmp;
-    }
-  else if (strcmp(charbuf,MQTT_PAYLOAD_REBOOT_COMMAND)==0) //reboot the controller
-    {
-    char tmp[10];
-    strcpy(tmp,"REBOOTING");
-    response=tmp;
-    rebootScheduled=true;
-    }
-  else if (processCommand(charbuf))
-    {
-    response="OK";
+    if (rebootScheduled)
+      {
+      ESP.restart();
+      }
     }
   else
-    {
-    char badCmd[18];
-    strcpy(badCmd,"(empty)");
-    response=badCmd;
-    }
-    
-  char topic[MQTT_TOPIC_SIZE];
-  strcpy(topic,settings.mqttTopicRoot);
-  strcat(topic,charbuf); //the incoming command becomes the topic suffix
-
-  if (!publish(topic,response,false)) //do not retain
-    Serial.println("************ Failure when publishing status response!");
-    
-  delay(2000); //give publish time to complete
-  
-  if (rebootScheduled)
-    {
-    ESP.restart();
-    }
+    Serial.println("Incoming MQTT message too large.");
   }
 
 

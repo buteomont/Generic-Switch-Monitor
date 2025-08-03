@@ -2,10 +2,11 @@
 #define VALID_SETTINGS_FLAG 0xDAB0
 #define LED_ON LOW
 #define LED_OFF HIGH
-#define SSID_SIZE 100
+#define SSID_SIZE 50
 #define PASSWORD_SIZE 50
 #define ADDRESS_SIZE 30
 #define USERNAME_SIZE 50
+#define MAX_COMMAND_SIZE 50 // incoming command names are all smaller than this
 #define MQTT_CLIENTID_SIZE 25
 #define MQTT_TOPIC_SIZE 150
 #define MQTT_TOPIC_SUFFIX_SIZE 15
@@ -26,6 +27,7 @@
 #define MQTT_PAYLOAD_STATUS_COMMAND "status" //show the most recent flow values
 #define MQTT_PAYLOAD_ARMED_STATUS "armed" //device has not triggered
 #define MQTT_PAYLOAD_TRIPPED_STATUS "tripped" //device has triggered
+#define MQTT_MAX_INCOMING_PAYLOAD_SIZE 100 //incoming MQTT message should never be this big
 #define PORT_COUNT 11 //Eleven different ports can be configured
 #define JSON_STATUS_SIZE SSID_SIZE+PASSWORD_SIZE+USERNAME_SIZE+MQTT_TOPIC_SIZE+ADDRESS_SIZE+((MQTT_TOPIC_SUFFIX_SIZE*2)*PORT_COUNT)+250 //+250 for associated field names, etc
 #define PUBLISH_DELAY 400 //milliseconds to wait after publishing to MQTT to allow transaction to finish
