@@ -41,6 +41,8 @@
 #define MDNS_DEFAULT_NAME "mousetrap" //need to make this part of the configuration settings
 #define MQTT_DEFAULT_TOPIC_SUFFIX_HIGH "high" //suffix if not supplied
 #define MQTT_DEFAULT_TOPIC_SUFFIX_LOW "low" //suffix if not supplied
+#define TX_PIN 1 //gpio1
+#define RX_PIN 3 //gpio3
 
 void showSettings();
 String getConfigCommand();

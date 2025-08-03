@@ -29,24 +29,26 @@ To configure the program via the serial port, simply connect the processor to a 
  - netmask=&lt;Network mask to be used with static IP&gt; (255.255.255.0)
  - mdnsname=<Name to use for MDNS> (ex. *mousetrap* for http://mousetrap.local)
  - debug=&lt;1 | true | 0 | false&gt; (Prints debug messages to the serial port)
- - portadd=gpioPort,highTopicSuffix,lowTopicSuffix
+ - portadd=gpioPort,highMessage,lowMessage,usePullup
  - portremove=gpioPort
 
-Pressing ENTER without any parameters will list the current settings.
+Pressing ENTER without any parameters will show the current settings.
 
 ### MQTT commands
 Once connected to an MQTT broker, configuration can be done similarly via the 
-&lt;topicroot&gt;/command topic. Because this program sleeps most of the time, you will need
-to send a &lt;topicroot&gt;/command with the RETAIN bit set and a message of "reportinterval=0"
+***&lt;topicroot&gt;/command*** topic. Because this program sleeps most of the time, you will need
+to send a ***&lt;topicroot&gt;/command*** with the RETAIN bit set and a message of "reportinterval=0"
 to keep it awake while you make changes. Reset *reportinterval* to the desired value when you are finished
-and don't forget to remove the retained MQTT message.
+and don't forget to remove the retained MQTT message from the broker.
 
-To get a list of the current settings, subscribe to *&lt;topicroot&gt;/#* on the broker, and then publish a message to *&lt;topicroot&gt;/command* with **settings** as the message payload.
+To change a parameter via MQTT, publish a message to topic ***&lt;topicroot&gt;/command*** with one of the configuration commands listed above as the message payload.
+
+To get a list of the current settings, subscribe to ***&lt;topicroot&gt;/#*** on the broker, and then publish a message to ***&lt;topicroot&gt;/command*** with **settings** as the message payload.
 
 ### REST commands (web page)
 If you have the MDNS name set, and the device is connected to WiFi, you can open a browser to *http://&lt;mdnsname&gt;.local* to get a handy configuration page.  
 
-If you can't or don't want to use the MDNS name but the device is connected to WiFi, you can browse to the IP address of the device. Finding the value of that address is left as an exercise for the reader. 
+If you can't or don't want to use the MDNS name but the device is connected to WiFi, you can browse to the IP address of the device. Finding the value of that address given to it by your DHCP server is left as an exercise for the reader. 
 
 If the device is not connected to the WiFi, it will open an access point (the ssid is ***monitor***). Connect your computer to the access point and browse to http://192.168.4.1 for the configuration page.
 
@@ -54,7 +56,7 @@ If the device is not connected to the WiFi, it will open an access point (the ss
 
 
 ## Waking On Event
-As mentioned, the device will awaken periodically at intervals specified by *reportInterval*, and send a report.  It can also be awakened by an external event, such as a switch closure. In this case, the switch must be connected to the RESET pin of the processor, pulling it low for a minimum of 100 microseconds.  When released, the processor will awaken and report the values immediately.
+As mentioned, the device will awaken periodically at intervals specified by *reportInterval*, and send a report.  It can also be awakened by an external event, such as a switch closure. In this case, the switch must be connected to the RESET pin of the processor, pulling it low for a minimum of 100 microseconds and then released.  When released, the processor will awaken and report the values immediately.
 
 If you want the switch to not only wake the processor, but be part of the report, you will need either a double-pole switch or a circuit to convert the switch closure to a short pulse to ground.  I've found that the circuit below works well in the second case:
 
@@ -65,7 +67,7 @@ If you want the switch to not only wake the processor, but be part of the report
 This circuit allows one switch to send a short LOW pulse to the reset pin, but allow the switch's state to be read by the processor.  This example uses a tiny ESP8266-01s<sup>3</sup> that can run for weeks on 2 AAA batteries.
 
 NOTES:
- 1. Most ports on ESP devices are multi-purpose, so you have to be very careful about which one you choose for your use case. Some ***must*** be in a certain state (high or low) when the device wakes up, or it simply will not boot. This is especially a problem on the ESP8266-01s, as only ports 0 and 2 are brought to the interface and they both have this limitation. The TX and RX lines (GPIO 1 and GPIO 3, respectively) can be used for general purpose I/O, but the serial port initialization code must be modified to prevent conflicts (I am working on a way to automate this) and you will lose the ability to configure via the serial port.
+ 1. Most ports on ESP devices are multi-purpose, so you have to be very careful about which one you choose for your use case. Some ***must*** be in a certain state (high or low) when the device wakes up, or it simply will not boot. This is especially a problem on the ESP8266-01s, as only ports 0 and 2 are brought to the interface and they both have this limitation. The TX and RX lines (GPIO 1 and GPIO 3, respectively) can be used for general purpose I/O, and the serial port initialization code automatically compensates for this, but you will lose the ability to configure via the serial port if you use one of these.
  2. In Putty you may have to use ctl-M ctl-J instead of the ENTER key when entering configuration parameters. I don't know why.
  3. If you're using an ESP8266-01s, don't forget you have to add a bodge wire from GPIO16 to the reset pin. It takes a good eye (or magnifier) and a steady hand, but it is possible. There are multiple articles on the web describing how to do this.
 
