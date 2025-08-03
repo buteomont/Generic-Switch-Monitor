@@ -19,7 +19,7 @@ To configure the program via the serial port, simply connect the processor to a 
 
  - broker=MQTT broker name or address&gt;
  - port=&lt;port number&gt;   (defaults to 1883)
- - topicroot=&lt;topic root&gt; (ex. basement/mousetrap/). your port suffix(s) will be added when reporting.
+ - topicroot=&lt;topic root&gt; (ex. basement/mousetrap/). A relevant suffix for each data will be added when reporting.
  - user=&lt;mqtt user&gt;
  - pass=&lt;mqtt password&gt;
  - ssid=&lt;wifi ssid&gt;
