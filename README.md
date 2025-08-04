@@ -64,7 +64,7 @@ If you want the switch to not only wake the processor, but be part of the report
 |:--:|
 | *This circuit was used on a livetrap. The microswitch was held open by the open door, and would close when the door slammed shut.* |
 
-This circuit allows one switch to send a short LOW pulse to the reset pin, but allow the switch's state to be read by the processor.  This example uses a tiny ESP8266-01s<sup>3</sup> that can run for weeks on 2 AAA batteries.
+This circuit allows one switch to send a short LOW pulse to the reset pin, but also allow the switch's state to be read by the processor.  This example uses a tiny ESP8266-01s<sup>3</sup> that can run for weeks on 2 AAA batteries.
 
 NOTES:
  1. Most ports on ESP devices are multi-purpose, so you have to be very careful about which one you choose for your use case. Some ***must*** be in a certain state (high or low) when the device wakes up, or it simply will not boot. This is especially a problem on the ESP8266-01s, as only ports 0 and 2 are brought to the interface and they both have this limitation. The TX and RX lines (GPIO 1 and GPIO 3, respectively) can be used for general purpose I/O, and the serial port initialization code automatically compensates for this, but you will lose the ability to configure via the serial port if you use one of these.
