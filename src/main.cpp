@@ -30,7 +30,14 @@
  * NOTE2: to upload a new web page from LittleFS, use "pio run --target uploadfs" in a 
  * terminal window.
  *
-  */
+ * NOTE3: Make sure to set the correct board and settings in platformio.ini
+ * 
+ * ****** IMPORTANT *******
+ *  This program is free software; you can redistribute it and/or modify it at will,
+ *  but please leave or include attribution. It was written by David Powell (david@depowell.com)  
+ *  in March of 2025.
+ * ************************
+ */
 
 #include <Arduino.h>
 #include <math.h>    
