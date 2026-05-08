@@ -1149,6 +1149,11 @@ void initSettings()
     delay(2000);
     ESP.restart();
     }
+
+  //If the settings are valid and an address is specified, set the static IP address
+  if (settingsAreValid && settings.address[0]!='\0')
+    ip.fromString(settings.address);
+  
   }
 
 void startAPMode() 
@@ -1164,6 +1169,7 @@ void startAPMode()
     {
     Serial.print("SoftAP '" + String(STANDALONE_SSID) + "' started. IP: ");
     Serial.println(WiFi.softAPIP());
+    Serial.println("Password is 'password'. Connect to this network to configure WiFi settings.");
     } 
   else 
     {
