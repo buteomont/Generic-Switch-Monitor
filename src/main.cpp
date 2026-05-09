@@ -49,6 +49,7 @@
 #include <FS.h>
 #include <LittleFS.h>
 #include <EEPROM.h>
+#include <ArduinoJson.h>
 #include "switchMonitor.h"
 
 #define VERSION "25.05.17.0"  //remember to update this after every change! YY.MM.DD.REV
@@ -61,6 +62,7 @@ AsyncWebServer server(80);
 
 String commandString = "";     // a String to hold incoming commands from serial
 bool commandComplete = false;  // goes true when enter is pressed
+char jsonBuffer[JSON_STATUS_SIZE]; //buffer for generating JSON status reports. Make this global to avoid using up precious RAM on the stack.
 
 typedef struct //these are the ports to monitor
   {
@@ -567,6 +569,76 @@ void checkForCommand()
     }
   }
 
+void getStatusJson(char* buffer, size_t bufferSize)
+  {
+  if (!mqttClient.connected()) return;
+
+  char topic[MQTT_TOPIC_SIZE+9];
+  strcpy(topic,settings.mqttTopicRoot);
+  strcat(topic,MQTT_PAYLOAD_STATUS_COMMAND);
+
+
+  JsonDocument statusDoc;
+  statusDoc["ssid"] = WiFi.SSID();
+  statusDoc["wifi_pass"] = settings.wifiPassword[0] ? "set" : "not set"; // Don't send the actual password
+  statusDoc["ip"] = WiFi.localIP().toString();
+  statusDoc["rssi"] = WiFi.RSSI();
+  statusDoc["heap"] = ESP.getFreeHeap();
+  statusDoc["uptime_sec"] = millis() / 1000;
+
+  JsonArray jPorts = statusDoc["ports"].to<JsonArray>(); // Create an array to hold switch statuses
+  for (int i=0;i<PORT_COUNT;i++)
+    {
+    if (settings.ports[i].isActive)
+      {
+      bool switchStatus=digitalRead(settings.ports[i].gpioNumber);
+      JsonObject port = jPorts.add<JsonObject>();
+      port["gpio"] = settings.ports[i].gpioNumber;
+      port["status"] = switchStatus?settings.ports[i].highMessage:settings.ports[i].lowMessage;
+      }
+    yield();
+    }
+
+  if (settings.debug)
+    {
+    Serial.println("OK: Status report published.");
+    }
+  
+  serializeJson(statusDoc, buffer, bufferSize);
+  }
+
+
+
+void getStatesJson(char* buffer, size_t bufferSize)
+  {
+  if (!mqttClient.connected()) return;
+
+  char topic[MQTT_TOPIC_SIZE+9];
+  strcpy(topic,settings.mqttTopicRoot);
+  strcat(topic,MQTT_PAYLOAD_STATUS_COMMAND);
+
+
+  JsonDocument statusDoc;
+  JsonArray jPorts = statusDoc["ports"].to<JsonArray>(); // Create an array to hold switch statuses
+  for (int i=0;i<PORT_COUNT;i++)
+    {
+    if (settings.ports[i].isActive)
+      {
+      bool switchStatus=digitalRead(settings.ports[i].gpioNumber);
+      JsonObject port = jPorts.add<JsonObject>();
+      port["gpio"] = settings.ports[i].gpioNumber;
+      port["status"] = switchStatus?settings.ports[i].highMessage:settings.ports[i].lowMessage;
+      }
+    yield();
+    }
+
+  if (settings.debug)
+    {
+    Serial.println("OK: Status report published.");
+    }
+  
+  serializeJson(statusDoc, buffer, bufferSize);
+  }
 
 /************************
  * Do the MQTT thing
@@ -574,58 +646,69 @@ void checkForCommand()
 bool report()
   {
   char topic[MQTT_TOPIC_SIZE+9];
-  char reading[18];
+  //char reading[18];
   bool ok=true;
 
   strcpy(topic,settings.mqttTopicRoot);
+  strcat(topic,MQTT_PAYLOAD_PORT_STATES_COMMAND);
+
+  
+  getStatesJson(jsonBuffer, JSON_STATUS_SIZE);
+  ok=ok & publish(topic,jsonBuffer,false); //don't retain the port states
+
+  // for (int i=0;i<PORT_COUNT;i++)
+  //   {
+  //   if (settings.ports[i].isActive)
+  //     {
+  //     bool switchStatus=digitalRead(settings.ports[i].gpioNumber);
+  //     publish(topic,switchStatus?settings.ports[i].highMessage:settings.ports[i].lowMessage,false);
+  //     }
+  //   }
+  yield();
+
+  // publish the status report as well
+  strcpy(topic,settings.mqttTopicRoot);
   strcat(topic,MQTT_PAYLOAD_STATUS_COMMAND);
+  getStatusJson(jsonBuffer, JSON_STATUS_SIZE);
+  ok=ok & publish(topic,jsonBuffer,true); //retain the status report
 
-  for (int i=0;i<PORT_COUNT;i++)
-    {
-    if (settings.ports[i].isActive)
-      {
-      bool switchStatus=digitalRead(settings.ports[i].gpioNumber);
-      publish(topic,switchStatus?settings.ports[i].highMessage:settings.ports[i].lowMessage,false);
-      }
-    }
-  yield();
 
-  //publish the radio strength reading while we're at it
-  strcpy(topic,settings.mqttTopicRoot);
-  strcat(topic,MQTT_TOPIC_RSSI);
-  sprintf(reading,"%d",WiFi.RSSI()); 
-  ok=ok & publish(topic,reading,true); //retain
-  yield();
+  // //publish the radio strength reading while we're at it
+  // strcpy(topic,settings.mqttTopicRoot);
+  // strcat(topic,MQTT_TOPIC_RSSI);
+  // sprintf(reading,"%d",WiFi.RSSI()); 
+  // ok=ok & publish(topic,reading,true); //retain
+  // yield();
 
-  //publish the battery voltage
-  uint32_t vccMilliVolts = ESP.getVcc(); // millivolts
-  float vccVolts = (float)vccMilliVolts / 1000.0;// Convert to Volts
-  strcpy(topic,settings.mqttTopicRoot);
-  strcat(topic,MQTT_TOPIC_BATTERY);
-  sprintf(reading,"%.2f",vccVolts); 
-  ok=ok & publish(topic,reading,true); //retain
-  yield();
+  // //publish the battery voltage
+  // uint32_t vccMilliVolts = ESP.getVcc(); // millivolts
+  // float vccVolts = (float)vccMilliVolts / 1000.0;// Convert to Volts
+  // strcpy(topic,settings.mqttTopicRoot);
+  // strcat(topic,MQTT_TOPIC_BATTERY);
+  // sprintf(reading,"%.2f",vccVolts); 
+  // ok=ok & publish(topic,reading,true); //retain
+  // yield();
 
-  // Publish some memory usage info
-  uint32_t freeHeap = ESP.getFreeHeap();
-  strcpy(topic,settings.mqttTopicRoot);
-  strcat(topic,MQTT_TOPIC_FREE_HEAP);
-  sprintf(reading,"%d",freeHeap); 
-  ok=ok & publish(topic,reading,true); //retain
-  yield();
+  // // Publish some memory usage info
+  // uint32_t freeHeap = ESP.getFreeHeap();
+  // strcpy(topic,settings.mqttTopicRoot);
+  // strcat(topic,MQTT_TOPIC_FREE_HEAP);
+  // sprintf(reading,"%d",freeHeap); 
+  // ok=ok & publish(topic,reading,true); //retain
+  // yield();
 
-  uint8_t heapFragmentation = ESP.getHeapFragmentation(); // Returns a percentage (0-100)
-  strcpy(topic,settings.mqttTopicRoot);
-  strcat(topic,MQTT_TOPIC_HEAP_FRAGMENTATION);
-  sprintf(reading,"%d%%",heapFragmentation); 
-  ok=ok & publish(topic,reading,true); //retain
-  yield();
+  // uint8_t heapFragmentation = ESP.getHeapFragmentation(); // Returns a percentage (0-100)
+  // strcpy(topic,settings.mqttTopicRoot);
+  // strcat(topic,MQTT_TOPIC_HEAP_FRAGMENTATION);
+  // sprintf(reading,"%d%%",heapFragmentation); 
+  // ok=ok & publish(topic,reading,true); //retain
+  // yield();
 
-  uint32_t maxFreeBlockSize = ESP.getMaxFreeBlockSize();
-  strcpy(topic,settings.mqttTopicRoot);
-  strcat(topic,MQTT_TOPIC_MAX_FREE_BLOCK_SIZE);
-  sprintf(reading,"%d",maxFreeBlockSize); 
-  ok=ok & publish(topic,reading,true); //retain
+  // uint32_t maxFreeBlockSize = ESP.getMaxFreeBlockSize();
+  // strcpy(topic,settings.mqttTopicRoot);
+  // strcat(topic,MQTT_TOPIC_MAX_FREE_BLOCK_SIZE);
+  // sprintf(reading,"%d",maxFreeBlockSize); 
+  // ok=ok & publish(topic,reading,true); //retain
   yield();
   
   if (settings.debug)
@@ -696,7 +779,7 @@ void incomingMqttHandler(char* reqTopic, byte* payload, unsigned int length)
     if (strcmp(charbuf,MQTT_PAYLOAD_SETTINGS_COMMAND)==0)
       {
       char tempbuf[35]; //for converting numbers to strings
-      char jsonStatus[JSON_STATUS_SIZE];
+      char* jsonStatus=jsonBuffer; //use the global buffer to avoid using up stack space.  This is safe because the MQTT client won't call this function again until we're done with it.
       
       strcpy(jsonStatus,"{");
       strcat(jsonStatus,"\"broker\":\"");
@@ -793,7 +876,7 @@ void incomingMqttHandler(char* reqTopic, byte* payload, unsigned int length)
     strcat(topic,charbuf); //the incoming command becomes the topic suffix
 
     if (!publish(topic,response,false)) //do not retain
-      Serial.println("************ Failure when publishing status response!");
+      Serial.println("************ Failure when publishing settings response!");
       
     delay(2000); //give publish time to complete
     
