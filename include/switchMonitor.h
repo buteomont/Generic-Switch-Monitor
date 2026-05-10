@@ -9,13 +9,17 @@
 #define MAX_COMMAND_SIZE 50 // incoming command names are all smaller than this
 #define MQTT_CLIENTID_SIZE 25
 #define MQTT_TOPIC_SIZE 150
+#define MQTT_TOPIC_SSID "ssid"
+#define MQTT_TOPIC_WIFI_PASSWORD "wifi_pass"
+#define MQTT_TOPIC_IP_ADDRESS "ip"
+#define MQTT_TOPIC_UPTIME "uptime_sec"
 #define MQTT_TOPIC_SUFFIX_SIZE 15
 #define MQTT_TOPIC_DISTANCE "distance"
 #define MQTT_TOPIC_BATTERY "battery"
 #define MQTT_TOPIC_ANALOG "analog"
 #define MQTT_TOPIC_RSSI "rssi"
 #define MQTT_TOPIC_SNR "snr"
-#define MQTT_TOPIC_FREE_HEAP "freeHeap"
+#define MQTT_TOPIC_FREE_HEAP "heap"
 #define MQTT_TOPIC_HEAP_FRAGMENTATION "heapFrag"
 #define MQTT_TOPIC_MAX_FREE_BLOCK_SIZE "maxBlockSize"
 #define MQTT_CLIENT_ID_ROOT "GenericMonitor"
@@ -51,7 +55,6 @@ void showSettings();
 String getConfigCommand();
 bool processCommand(String cmd);
 void checkForCommand();
-float read_pressure();
 bool report();
 boolean publish(char* topic, const char* reading, boolean retain);
 void incomingMqttHandler(char* reqTopic, byte* payload, unsigned int length) ;

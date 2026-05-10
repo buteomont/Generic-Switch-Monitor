@@ -569,22 +569,77 @@ void checkForCommand()
     }
   }
 
-void getStatusJson(char* buffer, size_t bufferSize)
+void getSettingsJson(char* buffer, size_t bufferSize)
   {
   if (!mqttClient.connected()) return;
 
+  JsonDocument doc;
+  
+  // Network
+  doc["ssid"] = settings.ssid;
+  doc["wifiPassword"] = settings.wifiPassword;
+  doc["address"] = settings.address;
+  doc["netmask"] = settings.netmask;
+  doc["mdnsName"] = settings.mdnsName;
+  
+  // MQTT
+  doc["mqtt_brokerAddress"] = settings.mqttBrokerAddress;
+  doc["mqttBrokerPort"] = settings.mqttBrokerPort;
+  doc["mqttUsername"] = settings.mqttUsername;
+  doc["mqttPassword"] = settings.mqttPassword;
+  doc["mqttTopicRoot"] = settings.mqttTopicRoot;
+  doc["mqttClientId"] = settings.mqttClientId;
+  
+  // System
+  doc["reportInterval"] = settings.reportInterval;
+  doc["debug"] = settings.debug;
+
+  // Ports
+  JsonArray jPorts = doc["ports"].to<JsonArray>();
+  for (int i=0;i<PORT_COUNT;i++)
+    {
+    if (settings.ports[i].isActive)
+      {
+      JsonObject port = jPorts.add<JsonObject>();
+      port["gpio"] = settings.ports[i].gpioNumber;
+      port["highMessage"] = settings.ports[i].highMessage;
+      port["lowMessage"] = settings.ports[i].lowMessage;
+      port["usePullup"] = settings.ports[i].usePullup;
+      }
+    yield();
+    }
+
   char topic[MQTT_TOPIC_SIZE+9];
   strcpy(topic,settings.mqttTopicRoot);
-  strcat(topic,MQTT_PAYLOAD_STATUS_COMMAND);
+  strcat(topic,MQTT_PAYLOAD_SETTINGS_COMMAND);
+  
+//  char buffer[1024]; // Slightly larger buffer for the full string set
+  serializeJson(doc, buffer, bufferSize);
+  
+//  publish(topic, buffer, true);
+
+  if (settings.debug)
+    {
+    Serial.println("OK: Settings report published.");
+    }
+  }
 
 
+
+void getStatusJson(char* buffer, size_t bufferSize)
+  {
+  if (!mqttClient.connected()) return;
+  
   JsonDocument statusDoc;
-  statusDoc["ssid"] = WiFi.SSID();
-  statusDoc["wifi_pass"] = settings.wifiPassword[0] ? "set" : "not set"; // Don't send the actual password
-  statusDoc["ip"] = WiFi.localIP().toString();
-  statusDoc["rssi"] = WiFi.RSSI();
-  statusDoc["heap"] = ESP.getFreeHeap();
-  statusDoc["uptime_sec"] = millis() / 1000;
+  statusDoc[MQTT_TOPIC_SSID] = WiFi.SSID();
+  statusDoc[MQTT_TOPIC_WIFI_PASSWORD] = settings.wifiPassword[0] ? "set" : "not set"; // Don't send the actual password
+  statusDoc[MQTT_TOPIC_IP_ADDRESS] = WiFi.localIP().toString();
+  statusDoc[MQTT_TOPIC_RSSI] = WiFi.RSSI();
+  statusDoc[MQTT_TOPIC_FREE_HEAP] = ESP.getFreeHeap();
+  statusDoc[MQTT_TOPIC_UPTIME] = millis() / 1000;
+  statusDoc[MQTT_TOPIC_HEAP_FRAGMENTATION] = ESP.getHeapFragmentation(); // Returns a percentage (0-100)
+  statusDoc[MQTT_TOPIC_MAX_FREE_BLOCK_SIZE] = ESP.getMaxFreeBlockSize();
+  statusDoc[MQTT_TOPIC_BATTERY] = (float)(ESP.getVcc()/1000.0); // Convert to Volts
 
   JsonArray jPorts = statusDoc["ports"].to<JsonArray>(); // Create an array to hold switch statuses
   for (int i=0;i<PORT_COUNT;i++)
@@ -646,70 +701,19 @@ void getStatesJson(char* buffer, size_t bufferSize)
 bool report()
   {
   char topic[MQTT_TOPIC_SIZE+9];
-  //char reading[18];
   bool ok=true;
 
   strcpy(topic,settings.mqttTopicRoot);
   strcat(topic,MQTT_PAYLOAD_PORT_STATES_COMMAND);
-
   
   getStatesJson(jsonBuffer, JSON_STATUS_SIZE);
   ok=ok & publish(topic,jsonBuffer,false); //don't retain the port states
 
-  // for (int i=0;i<PORT_COUNT;i++)
-  //   {
-  //   if (settings.ports[i].isActive)
-  //     {
-  //     bool switchStatus=digitalRead(settings.ports[i].gpioNumber);
-  //     publish(topic,switchStatus?settings.ports[i].highMessage:settings.ports[i].lowMessage,false);
-  //     }
-  //   }
-  yield();
-
-  // publish the status report as well
+  // publish the status report as well. Yes, it includes the port states.
   strcpy(topic,settings.mqttTopicRoot);
   strcat(topic,MQTT_PAYLOAD_STATUS_COMMAND);
   getStatusJson(jsonBuffer, JSON_STATUS_SIZE);
   ok=ok & publish(topic,jsonBuffer,true); //retain the status report
-
-
-  // //publish the radio strength reading while we're at it
-  // strcpy(topic,settings.mqttTopicRoot);
-  // strcat(topic,MQTT_TOPIC_RSSI);
-  // sprintf(reading,"%d",WiFi.RSSI()); 
-  // ok=ok & publish(topic,reading,true); //retain
-  // yield();
-
-  // //publish the battery voltage
-  // uint32_t vccMilliVolts = ESP.getVcc(); // millivolts
-  // float vccVolts = (float)vccMilliVolts / 1000.0;// Convert to Volts
-  // strcpy(topic,settings.mqttTopicRoot);
-  // strcat(topic,MQTT_TOPIC_BATTERY);
-  // sprintf(reading,"%.2f",vccVolts); 
-  // ok=ok & publish(topic,reading,true); //retain
-  // yield();
-
-  // // Publish some memory usage info
-  // uint32_t freeHeap = ESP.getFreeHeap();
-  // strcpy(topic,settings.mqttTopicRoot);
-  // strcat(topic,MQTT_TOPIC_FREE_HEAP);
-  // sprintf(reading,"%d",freeHeap); 
-  // ok=ok & publish(topic,reading,true); //retain
-  // yield();
-
-  // uint8_t heapFragmentation = ESP.getHeapFragmentation(); // Returns a percentage (0-100)
-  // strcpy(topic,settings.mqttTopicRoot);
-  // strcat(topic,MQTT_TOPIC_HEAP_FRAGMENTATION);
-  // sprintf(reading,"%d%%",heapFragmentation); 
-  // ok=ok & publish(topic,reading,true); //retain
-  // yield();
-
-  // uint32_t maxFreeBlockSize = ESP.getMaxFreeBlockSize();
-  // strcpy(topic,settings.mqttTopicRoot);
-  // strcat(topic,MQTT_TOPIC_MAX_FREE_BLOCK_SIZE);
-  // sprintf(reading,"%d",maxFreeBlockSize); 
-  // ok=ok & publish(topic,reading,true); //retain
-  yield();
   
   if (settings.debug)
     {
@@ -778,79 +782,20 @@ void incomingMqttHandler(char* reqTopic, byte* payload, unsigned int length)
     //if the command is MQTT_PAYLOAD_SETTINGS_COMMAND, send all of the settings
     if (strcmp(charbuf,MQTT_PAYLOAD_SETTINGS_COMMAND)==0)
       {
-      char tempbuf[35]; //for converting numbers to strings
       char* jsonStatus=jsonBuffer; //use the global buffer to avoid using up stack space.  This is safe because the MQTT client won't call this function again until we're done with it.
-      
-      strcpy(jsonStatus,"{");
-      strcat(jsonStatus,"\"broker\":\"");
-      strcat(jsonStatus,settings.mqttBrokerAddress);
-      strcat(jsonStatus,"\", \"port\":");
-      sprintf(tempbuf,"%d",settings.mqttBrokerPort);
-      strcat(jsonStatus,tempbuf);
-      strcat(jsonStatus,", \"topicroot\":\"");
-      strcat(jsonStatus,settings.mqttTopicRoot);
-      strcat(jsonStatus,"\", \"user\":\"");
-      strcat(jsonStatus,settings.mqttUsername);
-      strcat(jsonStatus,"\", \"pass\":\"");
-      strcat(jsonStatus,settings.mqttPassword);
-      strcat(jsonStatus,"\", \"ssid\":\"");
-      strcat(jsonStatus,settings.ssid);
-      strcat(jsonStatus,"\", \"wifipass\":\"");
-      strcat(jsonStatus,settings.wifiPassword);
-      strcat(jsonStatus,"\", \"mqttClientId\":\"");
-      strcat(jsonStatus,settings.mqttClientId);
-      strcat(jsonStatus,"\", \"address\":\"");
-      strcat(jsonStatus,settings.address);
-      strcat(jsonStatus,"\", \"netmask\":\"");
-      strcat(jsonStatus,settings.netmask);
-      strcat(jsonStatus,"\", \"mdnsname\":\"");
-      strcat(jsonStatus,settings.mdnsName);
-      strcat(jsonStatus,"\", \"debug\":\"");
-      strcat(jsonStatus,settings.debug?"true":"false");
-      strcat(jsonStatus,"\", \"reportinterval\":");
-      sprintf(tempbuf,"%lu",settings.reportInterval);
-      strcat(jsonStatus,tempbuf);
-      strcat(jsonStatus,", \"IPAddress\":\"");
-      strcat(jsonStatus,wifiClient.localIP().toString().c_str());
-      strcat(jsonStatus,"\",");
-      strcat(jsonStatus,"\"ports\":[");
-      for (int i=0;i<PORT_COUNT;i++)
-        {
-        if (settings.ports[i].isActive)
-          {
-          strcat(jsonStatus,"{\"GPIO\":");
-          sprintf(tempbuf,"%d",settings.ports[i].gpioNumber);
-          strcat(jsonStatus,tempbuf);
-          strcat(jsonStatus,", \"highmessage\":\"");
-          strcat(jsonStatus,settings.ports[i].highMessage);
-          strcat(jsonStatus,"\", \"lowmessage\":\"");
-          strcat(jsonStatus,settings.ports[i].lowMessage);
-          strcat(jsonStatus,"\", \"usePullup\":\"");
-          strcat(jsonStatus,settings.ports[i].usePullup?"true":"false");
-          strcat(jsonStatus,"\"},");
-          }
-        yield();
-        }
-      size_t len = strlen(jsonStatus);
-      if (jsonStatus[len - 1] == ',')
-        jsonStatus[len - 1] = ']';   //replace the last comma to close the array
-      else
-        strcat(jsonStatus,"]"); //happens when port array is empty
-      
-      strcat(jsonStatus,"}");
+
+      getSettingsJson(jsonStatus, JSON_STATUS_SIZE);
       response=jsonStatus;
+      }
+    else if (strcmp(charbuf,MQTT_PAYLOAD_STATUS_COMMAND)==0) //show the latest value
+      {
+      report();
+      response=nullptr; //no need to send a response, the report() function will have already published the status report
       }
     else if (strcmp(charbuf,MQTT_PAYLOAD_VERSION_COMMAND)==0) //show the version number
       {
       char tmp[15];
       strcpy(tmp,VERSION);
-      response=tmp;
-      }
-    else if (strcmp(charbuf,MQTT_PAYLOAD_STATUS_COMMAND)==0) //show the latest value
-      {
-      report();
-      char tmp[25];
-      strcpy(tmp,"Status report complete");
       response=tmp;
       }
     else if (strcmp(charbuf,MQTT_PAYLOAD_REBOOT_COMMAND)==0) //reboot the controller
@@ -875,10 +820,13 @@ void incomingMqttHandler(char* reqTopic, byte* payload, unsigned int length)
     strcpy(topic,settings.mqttTopicRoot);
     strcat(topic,charbuf); //the incoming command becomes the topic suffix
 
-    if (!publish(topic,response,false)) //do not retain
-      Serial.println("************ Failure when publishing settings response!");
-      
-    delay(2000); //give publish time to complete
+    if (response != nullptr)
+      {
+      if (!publish(topic,response,false)) //do not retain
+        Serial.println("************ Failure when publishing settings response!");
+        
+      delay(2000); //give publish time to complete
+      }
     
     if (rebootScheduled)
       {
