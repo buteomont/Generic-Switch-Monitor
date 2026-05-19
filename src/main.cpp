@@ -91,6 +91,7 @@ typedef struct
   char netmask[ADDRESS_SIZE]=""; //size of network
   ulong reportInterval=DEFAULT_REPORT_INTERVAL; //How long to wait between checks
   char mdnsName[ADDRESS_SIZE]=""; //Name to use for MDNS (without .local suffix)
+  int batteryType=DEFAULT_BATTERY_TYPE; //Battery type for determining battery_ok status
   port ports[PORT_COUNT];
   } conf;
 conf settings; //all settings in one struct makes it easier to store in EEPROM
@@ -183,6 +184,8 @@ String processor(const String& var)
   if (var =="debugChecked")     return settings.debug?" checked":"";
   if (var =="reportinterval")   return itoa(settings.reportInterval,buf,10);
   if (var =="mdnsname")         return settings.mdnsName     ;
+  if (var =="batteryAlkalineChecked") return settings.batteryType==BATTERY_TYPE_ALKALINE?" checked":"";
+  if (var =="batteryLithiumChecked") return settings.batteryType==BATTERY_TYPE_LITHIUM?" checked":"";
   if (var =="gpio0Checked")     return settings.ports[0].isActive?" checked":"";
   if (var =="gpio0highval")     return settings.ports[0].highMessage;
   if (var =="gpio0lowval")      return settings.ports[0].lowMessage;
@@ -280,11 +283,14 @@ void showSettings()
   Serial.print("mdnsname=<Name to use (without .local) for MDNS> (");
   Serial.print(settings.mdnsName);
   Serial.println(")");
-  Serial.print("debug=1|0 (");
+  Serial.print("debug=<1|0> (");
   Serial.print(settings.debug);
   Serial.println(")");
   Serial.print("reportinterval=<seconds>   (");
   Serial.print(settings.reportInterval);
+  Serial.println(")");
+  Serial.print("batterytype=<1 (Lithium)|0 (Alkaline)> (");
+  Serial.print(settings.batteryType);
   Serial.println(")");
   
   Serial.println("Ports:");
@@ -443,6 +449,13 @@ bool processCommand(String cmd)
           settings.reportInterval=atoi(val);
           saveSettings();
           }
+        else if (strcmp(nme,"batterytype")==0)
+          {  
+          if (!val)
+            strcpy(val,"0");
+          settings.batteryType=atoi(val)==1?BATTERY_TYPE_LITHIUM:BATTERY_TYPE_ALKALINE;
+          saveSettings();
+          }
 
         // "portadd=gpio,highmessage,lowmessage,usePullup" should add a port
         else if (strcmp(nme,"portadd")==0)
@@ -593,6 +606,7 @@ void getSettingsJson(char* buffer, size_t bufferSize)
   // System
   doc["reportInterval"] = settings.reportInterval;
   doc["debug"] = settings.debug;
+  doc["batteryType"] = settings.batteryType;
 
   // Ports
   JsonArray jPorts = doc["ports"].to<JsonArray>();
@@ -640,6 +654,7 @@ void getStatusJson(char* buffer, size_t bufferSize)
   statusDoc[MQTT_TOPIC_HEAP_FRAGMENTATION] = ESP.getHeapFragmentation(); // Returns a percentage (0-100)
   statusDoc[MQTT_TOPIC_MAX_FREE_BLOCK_SIZE] = ESP.getMaxFreeBlockSize();
   statusDoc[MQTT_TOPIC_BATTERY] = (float)(ESP.getVcc()/1000.0); // Convert to Volts
+  statusDoc[MQTT_TOPIC_BATTERY_OK] = ESP.getVcc()/1000.0 > (settings.batteryType == BATTERY_TYPE_ALKALINE ? BATTERY_OK_THRESHOLD_ALKALINE : BATTERY_OK_THRESHOLD_LITHIUM) ? "true" : "false"; // Battery OK status 
 
   JsonArray jPorts = statusDoc["ports"].to<JsonArray>(); // Create an array to hold switch statuses
   for (int i=0;i<PORT_COUNT;i++)
@@ -673,8 +688,8 @@ void getStatesJson(char* buffer, size_t bufferSize)
   strcat(topic,MQTT_PAYLOAD_STATUS_COMMAND);
 
 
-  JsonDocument statusDoc;
-  JsonArray jPorts = statusDoc["ports"].to<JsonArray>(); // Create an array to hold switch statuses
+  JsonDocument statesDoc;
+  JsonArray jPorts = statesDoc["ports"].to<JsonArray>(); // Create an array to hold switch statuses
   for (int i=0;i<PORT_COUNT;i++)
     {
     if (settings.ports[i].isActive)
@@ -692,7 +707,7 @@ void getStatesJson(char* buffer, size_t bufferSize)
     Serial.println("OK: Status report published.");
     }
   
-  serializeJson(statusDoc, buffer, bufferSize);
+  serializeJson(statesDoc, buffer, bufferSize);
   }
 
 /************************
@@ -1506,6 +1521,16 @@ void setup()
       if (val != settings.reportInterval)  
         {
         settings.reportInterval=val;
+        changed=true;
+        }
+      }
+    
+    if (request->hasParam("batterytype", true))
+      {
+      int val = atoi(request->getParam("batterytype", true)->value().c_str());
+      if (val != settings.batteryType)  
+        {
+        settings.batteryType=val;
         changed=true;
         }
       }

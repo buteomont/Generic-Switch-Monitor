@@ -33,6 +33,11 @@
       <tr><td>Debug Flag:     </td><td><input type="checkbox" name="debug" value="1" %debugChecked% onchange="updateStuff()" /></td><td>If checked, prints diagnostic info to the serial port.</td></tr>
       <tr><td>Report Interval:</td><td><input name="reportinterval" value="%reportinterval%" maxlength="5" onchange="updateStuff()" />     </td><td>How often in seconds to issue a status report. Processor will sleep between reports.</td></tr>
       <tr><td>MDNS Name:      </td><td><input name="mdnsname" value="%mdnsname%" maxlength="20" onchange="updateStuff()" />     </td><td>Use this name followed by ".local" to access this web page (e.g., mousetrap.local)</td></tr>
+      <tr><td>Battery Type:   </td><td>
+          <label><input type="radio" name="batterytype" value="0" %batteryAlkalineChecked% onchange="updateStuff()" /> Alkaline</label>
+          &nbsp;
+          <label><input type="radio" name="batterytype" value="1" %batteryLithiumChecked% onchange="updateStuff()" /> Lithium</label>
+        </td><td>Choose battery chemistry used for determining battery thresholds.</td></tr>
       </table>
 
     <h2>Monitored Ports</h2>

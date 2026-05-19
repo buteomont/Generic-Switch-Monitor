@@ -16,6 +16,7 @@
 #define MQTT_TOPIC_SUFFIX_SIZE 15
 #define MQTT_TOPIC_DISTANCE "distance"
 #define MQTT_TOPIC_BATTERY "battery"
+#define MQTT_TOPIC_BATTERY_OK "battery_ok"
 #define MQTT_TOPIC_ANALOG "analog"
 #define MQTT_TOPIC_RSSI "rssi"
 #define MQTT_TOPIC_SNR "snr"
@@ -33,12 +34,17 @@
 #define MQTT_PAYLOAD_ARMED_STATUS "armed" //device has not triggered
 #define MQTT_PAYLOAD_TRIPPED_STATUS "tripped" //device has triggered
 #define MQTT_MAX_INCOMING_PAYLOAD_SIZE 100 //incoming MQTT message should never be this big
+#define BATTERY_TYPE_ALKALINE 0
+#define BATTERY_TYPE_LITHIUM 1
 #define PORT_COUNT 11 //Eleven different ports can be configured
 #define JSON_STATUS_SIZE 1024 //size of the JSON string we send with the status and settings reports. Should be big enough to hold all the settings and the state of all ports.
 #define PUBLISH_DELAY 400 //milliseconds to wait after publishing to MQTT to allow transaction to finish
 #define WIFI_TIMEOUT_SECONDS 30 // give up on wifi after this long
 #define FULL_BATTERY_COUNT 3686 //raw A0 count with a freshly charged 18650 lithium battery 
-#define FULL_BATTERY_VOLTS 412 //4.12 volts for a fully charged 18650 lithium battery 
+#define FULL_BATTERY_VOLTS 412 //4.12 volts for a fully charged 18650 lithium battery
+#define BATTERY_OK_THRESHOLD_ALKALINE 2.5 //Battery voltage corresponding to the point where an alkaline battery is pretty much fully discharged and should be replaced soon. 
+#define BATTERY_OK_THRESHOLD_LITHIUM 3.0 //Battery voltage corresponding to the point where a lithium battery is pretty much fully discharged and should be charged to keep it from degrading.
+#define DEFAULT_BATTERY_TYPE BATTERY_TYPE_LITHIUM // Lithium is default battery type for determining battery_ok status
 #define ONE_HOUR 3600000 //milliseconds
 #define DEFAULT_REPORT_INTERVAL 60 //seconds to sleep between regular status reports
 #define SWITCH_PIN 14 //switch to monitor is on pin GPIO14 (D5) by default
