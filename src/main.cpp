@@ -1,29 +1,34 @@
-/* A simple, generic program to monitor a switch and report its status via MQTT when it changes.
+/* A simple, generic program to monitor one or more switches and report its status
+ * via MQTT when one changes.
  * 
  * This processor will sleep until one of two things occur:
  *  1. The processor is reset by momentarily pulling the reset pin low.
  *  2. The number of seconds in reportInterval has passed since the last wakeup.
- * When it wakes, it will connect to the specified router, subscribe to the command
- * topic (<topicRoot/command>) on the specified broker, and publish a set of values.
+ * 
+ * When it wakes, it will do one of two things:
+ *  A. If the settings are valid, it willonnect to the specified router, subscribe to the command
+ *     topic (<topicRoot/command>) on the configured broker, and publish a set of values.
+ *  B. If the settings are not valid, it will create a WiFi access point with an SSID of 
+ *     "monitor" and and address of 192.168.4.1. A web page is served that allows you to
+ *     enter the settings.  It will also print the settings to the serial port.
  * 
  * Configuration is done via serial connection, web page, or MQTT topic.  Enter:
  *  broker=<broker name or address>
  *  port=<port number>   (defaults to 1883)
  *  topicroot=<topic root> (something like buteomont/gate/package/ - must end with / and 
- *  suffixes like "status", "distance", "analog", or "voltage" will be added)
- *  user=<mqtt user>
- *  pass=<mqtt password>
+ *  suffixes like "status", "distance", "analog", or "voltage" will be added for different values)
+ *  user=<mqtt user> (optional)
+ *  pass=<mqtt password> (optional)
  *  ssid=<wifi ssid>
  *  wifipass=<wifi password>  
  *  reportinterval=<seconds>; //How long to wait between status reports
  *  switchPort=<GPIO number>; // GPIO port to which the monitored switch is connected
-
  * 
  * Once connected to an MQTT broker, configuration can be done similarly via the 
  * <topicroot>/command topic. Because this program sleeps most of the time, you will need
  * to send a <topicroot>/command with the RETAIN bit set and a message of "reportinterval=0"
  * to keep it awake while you make changes. Reset the reportinterval when you are finished
- * and don't forget to remove the retained MQTT message.
+ * and don't forget to remove the retained MQTT message from the broker.
  * 
  * NOTE1: If you're using an ESP8266-01s, don't forget to bodge GPIO16 to the reset pin! 
  * 

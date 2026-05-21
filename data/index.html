@@ -13,31 +13,31 @@
   <form action="/save" method="POST">
     <h2>WiFi and Network</h2>
     <table border="0">
-      <tr><td>SSID:          </td><td><input name="ssid"          value="%ssid%" maxlength="50" onchange="updateStuff()" />    </td><td>The router to which you want to connect          </td></tr>
-      <tr><td>WiFi Password: </td><td><input name="wifipass"      value="%wifipass%" maxlength="50" onchange="updateStuff()" /></td><td>The password to the router                       </td></tr>
-      <tr><td>Static Address:</td><td><input name="address"       value="%address%" maxlength="30" onchange="updateStuff()" /> </td><td>Optional. Will use DHCP if empty.                </td></tr>
-      <tr><td>Netmask:       </td><td><input name="netmask"       value="%netmask%" maxlength="30" onchange="updateStuff()" /> </td><td>Optional. Only needed if static address is used. </td></tr>
+      <tr><td>SSID:          </td><td><input name="ssid"          value="%ssid%" maxlength="50" onchange="updateStuff()" />    </td><td>The SSID of the WiFi AP to which you want to connect. </td></tr>
+      <tr><td>WiFi Password: </td><td><input name="wifipass"      value="%wifipass%" maxlength="50" onchange="updateStuff()" /></td><td>The password to the above access point.               </td></tr>
+      <tr><td>Static Address:</td><td><input name="address"       value="%address%" maxlength="30" onchange="updateStuff()" /> </td><td>Optional. Will use DHCP if left blank.                    </td></tr>
+      <tr><td>Netmask:       </td><td><input name="netmask"       value="%netmask%" maxlength="30" onchange="updateStuff()" /> </td><td>Optional. Only needed if a static address is used.     </td></tr>
       </table>
 
     <h2>MQTT</h2>
     <table border="0">
       <tr><td>Broker:    </td><td><input name="broker"        value="%broker%" maxlength="50" onchange="updateStuff()" />   </td><td>The MQTT broker to which to send the reports.    </td></tr>
-      <tr><td>Port:      </td><td><input name="port"          value="%port%" maxlength="5" onchange="updateStuff()" />     </td><td>The port of the MQTT broker (usually 1883).      </td></tr>
-      <tr><td>Topic Root:</td><td><input name="topicroot"     value="%topicroot%" maxlength="100" onchange="updateStuff()" /></td><td>The root of the MQTT topic. Must end with /.     </td></tr>
+      <tr><td>Port:      </td><td><input name="port"          value="%port%" maxlength="5" onchange="updateStuff()" />     </td><td>The port of the MQTT broker (usually 1883).       </td></tr>
+      <tr><td>Topic Root:</td><td><input name="topicroot"     value="%topicroot%" maxlength="100" onchange="updateStuff()" /></td><td>The root of the MQTT topic. Must end with /.    </td></tr>
       <tr><td>User:      </td><td><input name="user"          value="%user%" maxlength="50" onchange="updateStuff()" />     </td><td>This is the userid for MQTT. Leave blank if none.</td></tr>
       <tr><td>Password:  </td><td><input name="pass"          value="%pass%" maxlength="50" onchange="updateStuff()" />     </td><td>The password for the above user.                 </td></tr>
       </table>
 
     <h2>Controls</h2>
     <table border="0">
-      <tr><td>Debug Flag:     </td><td><input type="checkbox" name="debug" value="1" %debugChecked% onchange="updateStuff()" /></td><td>If checked, prints diagnostic info to the serial port.</td></tr>
       <tr><td>Report Interval:</td><td><input name="reportinterval" value="%reportinterval%" maxlength="5" onchange="updateStuff()" />     </td><td>How often in seconds to issue a status report. Processor will sleep between reports.</td></tr>
-      <tr><td>MDNS Name:      </td><td><input name="mdnsname" value="%mdnsname%" maxlength="20" onchange="updateStuff()" />     </td><td>Use this name followed by ".local" to access this web page (e.g., mousetrap.local)</td></tr>
+      <tr><td>MDNS Name:      </td><td><input name="mdnsname" value="%mdnsname%" maxlength="20" onchange="updateStuff()" />     </td><td>Use this name followed by ".local" to access this web page (e.g., mousetrap.local).</td></tr>
       <tr><td>Battery Type:   </td><td>
           <label><input type="radio" name="batterytype" value="0" %batteryAlkalineChecked% onchange="updateStuff()" /> Alkaline</label>
           &nbsp;
           <label><input type="radio" name="batterytype" value="1" %batteryLithiumChecked% onchange="updateStuff()" /> Lithium</label>
         </td><td>Choose battery chemistry used for determining battery thresholds.</td></tr>
+      <tr><td>Debug Flag:     </td><td><input type="checkbox" name="debug" value="1" %debugChecked% onchange="updateStuff()" /></td><td>If checked, prints diagnostic info to the serial port.</td></tr>
       </table>
 
     <h2>Monitored Ports</h2>
