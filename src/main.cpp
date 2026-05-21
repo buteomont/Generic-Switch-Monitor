@@ -91,7 +91,7 @@ typedef struct
   char netmask[ADDRESS_SIZE]=""; //size of network
   ulong reportInterval=DEFAULT_REPORT_INTERVAL; //How long to wait between checks
   char mdnsName[ADDRESS_SIZE]=""; //Name to use for MDNS (without .local suffix)
-  int batteryType=DEFAULT_BATTERY_TYPE; //Battery type for determining battery_ok status
+  int batteryType=DEFAULT_BATTERY_TYPE; //Battery type for determining battery_ok status (0=alkaline, 1=lithium)
   port ports[PORT_COUNT];
   } conf;
 conf settings; //all settings in one struct makes it easier to store in EEPROM
