@@ -1547,379 +1547,64 @@ void setup()
     for (int i=0;i<PORT_COUNT;i++)
       settings.ports[i].isActive=false;
 
+    // GPIO numbers mapped to port indices
+    const int gpioMap[PORT_COUNT] = {0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16};
+
     //now process all of the ports in the request
-    // ------Port 0
-    port* thisPort=&settings.ports[0];
-    if (request->hasParam("useGpio0", true))
+    for (int i=0; i<PORT_COUNT; i++)
       {
-      thisPort->isActive=true;
-      thisPort->gpioNumber=0;
-      if (request->hasParam("gpio0highval",true))
-        {
-        const char* val = request->getParam("gpio0highval", true)->value().c_str();
-        if (strlen(val)>0)
-          snprintf(thisPort->highMessage,sizeof(thisPort->highMessage),"%s",val);
-        else
-          strcpy(thisPort->highMessage,MQTT_DEFAULT_TOPIC_SUFFIX_HIGH);
-        }
-      if (request->hasParam("gpio0lowval",true))
-        {
-        const char* val = request->getParam("gpio0lowval", true)->value().c_str();
-        if (strlen(val)>0)
-          snprintf(thisPort->lowMessage,sizeof(thisPort->lowMessage),"%s",val);
-        else
-          strcpy(thisPort->lowMessage,MQTT_DEFAULT_TOPIC_SUFFIX_LOW);
-        }
-      if (request->hasParam("usePullup0",true))
-        {
-        thisPort->usePullup=true;
-        }
-      }
-    else
-      {
-      thisPort->highMessage[0]='\0';
-      thisPort->lowMessage[0]='\0';
-      thisPort->usePullup=false;
-      }
+      int gpioNum = gpioMap[i];
+      port* thisPort = &settings.ports[i];
       
-    // ------Port 1
-    thisPort=&settings.ports[1];
-    if (request->hasParam("useGpio1", true))
-      {
-      thisPort->isActive=true;
-      thisPort->gpioNumber=1;
-      if (request->hasParam("gpio1highval",true))
-        {
-        const char* val = request->getParam("gpio1highval", true)->value().c_str();
-        if (strlen(val)>0)
-          snprintf(thisPort->highMessage,sizeof(thisPort->highMessage),"%s",val);
-        else
-          strcpy(thisPort->highMessage,MQTT_DEFAULT_TOPIC_SUFFIX_HIGH);
-        }
-      if (request->hasParam("gpio1lowval",true))
-        {
-        const char* val = request->getParam("gpio1lowval", true)->value().c_str();
-        if (strlen(val)>0)
-          snprintf(thisPort->lowMessage,sizeof(thisPort->lowMessage),"%s",val);
-        else
-          strcpy(thisPort->lowMessage,MQTT_DEFAULT_TOPIC_SUFFIX_LOW);
-        }
-      if (request->hasParam("usePullup1",true))
-        {
-        thisPort->usePullup=true;
-        }
-      }
-    else
-      {
-      thisPort->highMessage[0]='\0';
-      thisPort->lowMessage[0]='\0';
-      thisPort->usePullup=false;
-      }
+      // Build parameter names dynamically
+      char checkboxParam[20];
+      char highParam[20];
+      char lowParam[20];
+      char pullupParam[20];
       
-    // ------Port 2
-    thisPort=&settings.ports[2];
-    if (request->hasParam("useGpio2", true))
-      {
-      thisPort->isActive=true;
-      thisPort->gpioNumber=2;
-      if (request->hasParam("gpio2highval",true))
+      snprintf(checkboxParam, sizeof(checkboxParam), "useGpio%d", gpioNum);
+      snprintf(highParam, sizeof(highParam), "gpio%dhighval", gpioNum);
+      snprintf(lowParam, sizeof(lowParam), "gpio%dlowval", gpioNum);
+      snprintf(pullupParam, sizeof(pullupParam), "usePullup%d", gpioNum);
+      
+      if (request->hasParam(checkboxParam, true))
         {
-        const char* val = request->getParam("gpio2highval", true)->value().c_str();
-        if (strlen(val)>0)
-          snprintf(thisPort->highMessage,sizeof(thisPort->highMessage),"%s",val);
-        else
-          strcpy(thisPort->highMessage,MQTT_DEFAULT_TOPIC_SUFFIX_HIGH);
-        }
-      if (request->hasParam("gpio2lowval",true))
-        {
-        const char* val = request->getParam("gpio2lowval", true)->value().c_str();
-        if (strlen(val)>0)
-          snprintf(thisPort->lowMessage,sizeof(thisPort->lowMessage),"%s",val);
-        else
-          strcpy(thisPort->lowMessage,MQTT_DEFAULT_TOPIC_SUFFIX_LOW);
-        }
-      if (request->hasParam("usePullup2",true))
-        {
-        thisPort->usePullup=true;
-        }
-      }
-    else
-      {
-      thisPort->highMessage[0]='\0';
-      thisPort->lowMessage[0]='\0';
-      thisPort->usePullup=false;
-      }
-       
-    // ------Port 3
-    thisPort=&settings.ports[3];
-    if (request->hasParam("useGpio3", true))
-      {
-      thisPort->isActive=true;
-      thisPort->gpioNumber=3;
-      if (request->hasParam("gpio3highval",true))
-        {
-        const char* val = request->getParam("gpio3highval", true)->value().c_str();
-        if (strlen(val)>0)
-          snprintf(thisPort->highMessage,sizeof(thisPort->highMessage),"%s",val);
-        else
-          strcpy(thisPort->highMessage,MQTT_DEFAULT_TOPIC_SUFFIX_HIGH);
-        }
-      if (request->hasParam("gpio3lowval",true))
-        {
-        const char* val = request->getParam("gpio3lowval", true)->value().c_str();
-        if (strlen(val)>0)
-          snprintf(thisPort->lowMessage,sizeof(thisPort->lowMessage),"%s",val);
-        else
-          strcpy(thisPort->lowMessage,MQTT_DEFAULT_TOPIC_SUFFIX_LOW);
-        }
-      if (request->hasParam("usePullup3",true))
-        {
-        thisPort->usePullup=true;
-        }
-      }
-    else
-      {
-      thisPort->highMessage[0]='\0';
-      thisPort->lowMessage[0]='\0';
-      thisPort->usePullup=false;
-      }
-       
-    // ------Port 4
-    thisPort=&settings.ports[4];
-    if (request->hasParam("useGpio4", true))
-      {
-      thisPort->isActive=true;
-      thisPort->gpioNumber=4;
-      if (request->hasParam("gpio4highval",true))
-        {
-        const char* val = request->getParam("gpio4highval", true)->value().c_str();
-        if (strlen(val)>0)
-          snprintf(thisPort->highMessage,sizeof(thisPort->highMessage),"%s",val);
-        else
-          strcpy(thisPort->highMessage,MQTT_DEFAULT_TOPIC_SUFFIX_HIGH);
-        }
-      if (request->hasParam("gpio4lowval",true))
-        {
-        const char* val = request->getParam("gpio4lowval", true)->value().c_str();
-        if (strlen(val)>0)
-          snprintf(thisPort->lowMessage,sizeof(thisPort->lowMessage),"%s",val);
-        else
-          strcpy(thisPort->lowMessage,MQTT_DEFAULT_TOPIC_SUFFIX_LOW);
-        }
-      if (request->hasParam("usePullup4",true))
-        {
-        thisPort->usePullup=true;
-        }
-      }
-    else
-      {
-      thisPort->highMessage[0]='\0';
-      thisPort->lowMessage[0]='\0';
-      thisPort->usePullup=false;
-      }
-       
-    // ------Port 5
-    thisPort=&settings.ports[5];
-    if (request->hasParam("useGpio5", true))
-      {
-      thisPort->isActive=true;
-      thisPort->gpioNumber=5;
-      if (request->hasParam("gpio5highval",true))
-        {
-        const char* val = request->getParam("gpio5highval", true)->value().c_str();
-        if (strlen(val)>0)
-          snprintf(thisPort->highMessage,sizeof(thisPort->highMessage),"%s",val);
-        else
-          strcpy(thisPort->highMessage,MQTT_DEFAULT_TOPIC_SUFFIX_HIGH);
-        }
-      if (request->hasParam("gpio5lowval",true))
-        {
-        const char* val = request->getParam("gpio5lowval", true)->value().c_str();
-        if (strlen(val)>0)
-          snprintf(thisPort->lowMessage,sizeof(thisPort->lowMessage),"%s",val);
-        else
-          strcpy(thisPort->lowMessage,MQTT_DEFAULT_TOPIC_SUFFIX_LOW);
-        }
-      if (request->hasParam("usePullup5",true))
-        {
-        thisPort->usePullup=true;
-        }
-      }
-    else
-      {
-      thisPort->highMessage[0]='\0';
-      thisPort->lowMessage[0]='\0';
-      thisPort->usePullup=false;
-      }
-       
-    // ------Port 12
-    thisPort=&settings.ports[6];
-    if (request->hasParam("useGpio12", true))
-      {
-      thisPort->isActive=true;
-      thisPort->gpioNumber=12;
-      if (request->hasParam("gpio12highval",true))
-        {
-        const char* val = request->getParam("gpio12highval", true)->value().c_str();
-        if (strlen(val)>0)
-          snprintf(thisPort->highMessage,sizeof(thisPort->highMessage),"%s",val);
-        else
-          strcpy(thisPort->highMessage,MQTT_DEFAULT_TOPIC_SUFFIX_HIGH);
-        }
-      if (request->hasParam("gpio12lowval",true))
-        {
-        const char* val = request->getParam("gpio12lowval", true)->value().c_str();
-        if (strlen(val)>0)
-          snprintf(thisPort->lowMessage,sizeof(thisPort->lowMessage),"%s",val);
-        else
-          strcpy(thisPort->lowMessage,MQTT_DEFAULT_TOPIC_SUFFIX_LOW);
-        }
-      if (request->hasParam("usePullup12",true))
-        {
-        thisPort->usePullup=true;
-        }
-      }
-    else
-      {
-      thisPort->highMessage[0]='\0';
-      thisPort->lowMessage[0]='\0';
-      thisPort->usePullup=false;
-      }
-       
-    // ------Port 13
-    thisPort=&settings.ports[7];
-    if (request->hasParam("useGpio13", true))
-      {
-      thisPort->isActive=true;
-      thisPort->gpioNumber=13;
-      if (request->hasParam("gpio13highval",true))
-        {
-        const char* val = request->getParam("gpio13highval", true)->value().c_str();
-        if (strlen(val)>0)
-          snprintf(thisPort->highMessage,sizeof(thisPort->highMessage),"%s",val);
-        else
-          strcpy(thisPort->highMessage,MQTT_DEFAULT_TOPIC_SUFFIX_HIGH);
-        }
-      if (request->hasParam("gpio13lowval",true))
-        {
-        const char* val = request->getParam("gpio13lowval", true)->value().c_str();
-        if (strlen(val)>0)
-          snprintf(thisPort->lowMessage,sizeof(thisPort->lowMessage),"%s",val);
-        else
-          strcpy(thisPort->lowMessage,MQTT_DEFAULT_TOPIC_SUFFIX_LOW);
-        }
-      if (request->hasParam("usePullup13",true))
-        {
-        thisPort->usePullup=true;
-        }
-      }
-    else
-      {
-      thisPort->highMessage[0]='\0';
-      thisPort->lowMessage[0]='\0';
-      thisPort->usePullup=false;
-      }
-       
-    // ------Port 14
-    thisPort=&settings.ports[8];
-    if (request->hasParam("useGpio14", true))
-      {
-      thisPort->isActive=true;
-      thisPort->gpioNumber=14;
-      if (request->hasParam("gpio14highval",true))
-        {
-        const char* val = request->getParam("gpio14highval", true)->value().c_str();
-        if (strlen(val)>0)
-          snprintf(thisPort->highMessage,sizeof(thisPort->highMessage),"%s",val);
-        else
-          strcpy(thisPort->highMessage,MQTT_DEFAULT_TOPIC_SUFFIX_HIGH);
-        }
-      if (request->hasParam("gpio14lowval",true))
-        {
-        const char* val = request->getParam("gpio14lowval", true)->value().c_str();
-        if (strlen(val)>0)
-          snprintf(thisPort->lowMessage,sizeof(thisPort->lowMessage),"%s",val);
-        else
-          strcpy(thisPort->lowMessage,MQTT_DEFAULT_TOPIC_SUFFIX_LOW);
-        }
-      if (request->hasParam("usePullup14",true))
-        {
-        thisPort->usePullup=true;
-        }
-      }
-    else
-      {
-      thisPort->highMessage[0]='\0';
-      thisPort->lowMessage[0]='\0';
-      thisPort->usePullup=false;
-      }
-       
-    // ------Port 15
-    thisPort=&settings.ports[9];
-    if (request->hasParam("useGpio15", true))
-      {
-      thisPort->isActive=true;
-      thisPort->gpioNumber=15;
-      if (request->hasParam("gpio15highval",true))
-        {
-        const char* val = request->getParam("gpio15highval", true)->value().c_str();
-        if (strlen(val)>0)
-          snprintf(thisPort->highMessage,sizeof(thisPort->highMessage),"%s",val);
-        else
-          strcpy(thisPort->highMessage,MQTT_DEFAULT_TOPIC_SUFFIX_HIGH);
-        }
-      if (request->hasParam("gpio15lowval",true))
-        {
-        const char* val = request->getParam("gpio15lowval", true)->value().c_str();
-        if (strlen(val)>0)
-          snprintf(thisPort->lowMessage,sizeof(thisPort->lowMessage),"%s",val);
-        else
-          strcpy(thisPort->lowMessage,MQTT_DEFAULT_TOPIC_SUFFIX_LOW);
-        }
-      if (request->hasParam("usePullup15",true))
-        {
-        thisPort->usePullup=true;
-        }
-      }
-    else
-      {
-      thisPort->highMessage[0]='\0';
-      thisPort->lowMessage[0]='\0';
-      thisPort->usePullup=false;
-      }
+        thisPort->isActive = true;
+        thisPort->gpioNumber = gpioNum;
         
-    // ------Port 16
-    thisPort=&settings.ports[10];
-    if (request->hasParam("useGpio16", true))
-      {
-      thisPort->isActive=true;
-      thisPort->gpioNumber=16;
-      if (request->hasParam("gpio16highval",true))
-        {
-        const char* val = request->getParam("gpio16highval", true)->value().c_str();
-        if (strlen(val)>0)
-          snprintf(thisPort->highMessage,sizeof(thisPort->highMessage),"%s",val);
+        if (request->hasParam(highParam, true))
+          {
+          const char* val = request->getParam(highParam, true)->value().c_str();
+          if (strlen(val) > 0)
+            snprintf(thisPort->highMessage, sizeof(thisPort->highMessage), "%s", val);
+          else
+            strcpy(thisPort->highMessage, MQTT_DEFAULT_TOPIC_SUFFIX_HIGH);
+          }
+        
+        if (request->hasParam(lowParam, true))
+          {
+          const char* val = request->getParam(lowParam, true)->value().c_str();
+          if (strlen(val) > 0)
+            snprintf(thisPort->lowMessage, sizeof(thisPort->lowMessage), "%s", val);
+          else
+            strcpy(thisPort->lowMessage, MQTT_DEFAULT_TOPIC_SUFFIX_LOW);
+          }
+        
+        if (request->hasParam(pullupParam, true))
+          {
+          thisPort->usePullup = true;
+          }
         else
-          strcpy(thisPort->highMessage,MQTT_DEFAULT_TOPIC_SUFFIX_HIGH);
+          {
+          thisPort->usePullup = false;
+          }
         }
-      if (request->hasParam("gpio16lowval",true))
+      else
         {
-        const char* val = request->getParam("gpio16lowval", true)->value().c_str();
-        if (strlen(val)>0)
-          snprintf(thisPort->lowMessage,sizeof(thisPort->lowMessage),"%s",val);
-        else
-          strcpy(thisPort->lowMessage,MQTT_DEFAULT_TOPIC_SUFFIX_LOW);
+        thisPort->highMessage[0] = '\0';
+        thisPort->lowMessage[0] = '\0';
+        thisPort->usePullup = false;
         }
-      if (request->hasParam("usePullup16",true))
-        {
-        thisPort->usePullup=true;
-        }
-      }
-    else
-      {
-      thisPort->highMessage[0]='\0';
-      thisPort->lowMessage[0]='\0';
-      thisPort->usePullup=false;
       }
     
     if (changed)
