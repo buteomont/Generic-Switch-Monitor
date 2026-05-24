@@ -26,7 +26,7 @@
  * 
  * Once connected to an MQTT broker, configuration can be done similarly via the 
  * <topicroot>/command topic. Because this program sleeps most of the time, you will need
- * to send a <topicroot>/command with the RETAIN bit set and a message of "reportinterval=0"
+ * to send a <topicroot>/command MQTT topic with the RETAIN bit set and a message of "reportinterval=0"
  * to keep it awake while you make changes. Reset the reportinterval when you are finished
  * and don't forget to remove the retained MQTT message from the broker.
  * 
@@ -57,7 +57,7 @@
 #include <ArduinoJson.h>
 #include "switchMonitor.h"
 
-#define VERSION "25.05.17.0"  //remember to update this after every change! YY.MM.DD.REV
+#define VERSION "26.05.23.0"  //remember to update this after every change! YY.MM.DD.REV
 
 ADC_MODE(ADC_VCC); //use the ADC to measure battery voltage
 

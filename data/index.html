@@ -2,10 +2,37 @@
 <html>
 <head><title>Settings</title><meta charset="UTF-8"></head>
 <script>
-  function updateStuff()
+  function updateStuff(caller)
     {
     document.getElementById('msg').innerHTML = "";  // Clear it
-    document.getElementById('saveButton').disabled = false; //enable it
+    document.getElementById('saveButton').disabled = false; //enable it 
+
+    // Auto-check/uncheck GPIO checkboxes only if a message field was changed (not if checkbox was clicked)
+    if (caller && (caller.name.includes('highval') || caller.name.includes('lowval'))) 
+      {
+      // Extract GPIO number from field name (e.g., 'gpio0highval' -> '0')
+      const match = caller.name.match(/gpio(\d+)(high|low)val/);
+      if (match) 
+        {
+        const gpioNum = match[1];
+        const highField = document.getElementsByName('gpio' + gpioNum + 'highval')[0];
+        const lowField = document.getElementsByName('gpio' + gpioNum + 'lowval')[0];
+        const checkbox = document.getElementsByName('useGpio' + gpioNum)[0];
+        
+        if (highField && lowField && checkbox) 
+          {
+          // Both fields must have content to auto-check; if either is blank, auto-uncheck
+          if (highField.value.trim() !== '' && lowField.value.trim() !== '') 
+            {
+            checkbox.checked = true;
+            }
+          else
+            {
+            checkbox.checked = false;
+            }
+          }
+        }
+      }
     }
   </script>
 <body>
@@ -53,88 +80,88 @@
       <tr>
         <td align="left"><input type="checkbox" name="useGpio0" value="1" %gpio0Checked% onchange="updateStuff()" /></td>
         <td>&nbsp;0 (D3)</td>
-        <td align="left"><input name="gpio0highval" value="%gpio0highval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
-        <td align="left"><input name="gpio0lowval" value="%gpio0lowval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio0highval" value="%gpio0highval%" maxlength="10" size="10" onchange="updateStuff(this)" /></td>
+        <td align="left"><input name="gpio0lowval" value="%gpio0lowval%" maxlength="10" size="10" onchange="updateStuff(this)" /></td>
         <td align="left"><input type="checkbox" name="usePullup0" value="1" %pullup0Checked% onchange="updateStuff()" /></td>
         <td align="left">Must be HIGH for normal boot.</td>
         </tr>
       <tr>
         <td align="left"><input type="checkbox" name="useGpio1" value="1" %gpio1Checked% onchange="updateStuff()" /></td>
         <td>&nbsp;1 (TX)</td>
-        <td align="left"><input name="gpio1highval" value="%gpio1highval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
-        <td align="left"><input name="gpio1lowval" value="%gpio1lowval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio1highval" value="%gpio1highval%" maxlength="10" size="10" onchange="updateStuff(this)" /></td>
+        <td align="left"><input name="gpio1lowval" value="%gpio1lowval%" maxlength="10" size="10" onchange="updateStuff(this)" /></td>
         <td align="left"><input type="checkbox" name="usePullup1" value="1" %pullup1Checked% onchange="updateStuff()" /></td>
         <td align="left">Used for serial TX. Must be HIGH for normal boot. UART transmit is disabled if this port is used.</td>
         </tr>
       <tr>
         <td align="left"><input type="checkbox" name="useGpio2" value="1" %gpio2Checked% onchange="updateStuff()" /></td>
         <td>&nbsp;2 (D4)</td>
-        <td align="left"><input name="gpio2highval" value="%gpio2highval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
-        <td align="left"><input name="gpio2lowval" value="%gpio2lowval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio2highval" value="%gpio2highval%" maxlength="10" size="10" onchange="updateStuff(this)" /></td>
+        <td align="left"><input name="gpio2lowval" value="%gpio2lowval%" maxlength="10" size="10" onchange="updateStuff(this)" /></td>
         <td align="left"><input type="checkbox" name="usePullup2" value="1" %pullup2Checked% onchange="updateStuff()" /></td>
         <td align="left">Must be HIGH for normal boot. Connected to built-in LED.</td>
         </tr>
       <tr>
         <td align="left"><input type="checkbox" name="useGpio3" value="1" %gpio3Checked% onchange="updateStuff()" /></td>
         <td>&nbsp;3 (RX)</td>
-        <td align="left"><input name="gpio3highval" value="%gpio3highval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
-        <td align="left"><input name="gpio3lowval" value="%gpio3lowval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio3highval" value="%gpio3highval%" maxlength="10" size="10" onchange="updateStuff(this)" /></td>
+        <td align="left"><input name="gpio3lowval" value="%gpio3lowval%" maxlength="10" size="10" onchange="updateStuff(this)" /></td>
         <td align="left"><input type="checkbox" name="usePullup3" value="1" %pullup3Checked% onchange="updateStuff()" /></td>
         <td align="left">Used for serial receive. UART receive is disabled if this port is used.</td>
         </tr>
       <tr>
         <td align="left"><input type="checkbox" name="useGpio4" value="1" %gpio4Checked% onchange="updateStuff()" /></td>
         <td>&nbsp;4 (D2)</td>
-        <td align="left"><input name="gpio4highval" value="%gpio4highval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
-        <td align="left"><input name="gpio4lowval" value="%gpio4lowval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio4highval" value="%gpio4highval%" maxlength="10" size="10" onchange="updateStuff(this)" /></td>
+        <td align="left"><input name="gpio4lowval" value="%gpio4lowval%" maxlength="10" size="10" onchange="updateStuff(this)" /></td>
         <td align="left"><input type="checkbox" name="usePullup4" value="1" %pullup4Checked% onchange="updateStuff()" /></td>
         <td align="left">Also used as default I2C SCL (clock).</td>
         </tr>
        <tr>
         <td align="left"><input type="checkbox" name="useGpio5" value="1" %gpio5Checked% onchange="updateStuff()" /></td>
         <td>&nbsp;5 (D1)</td>
-        <td align="left"><input name="gpio5highval" value="%gpio5highval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
-        <td align="left"><input name="gpio5lowval" value="%gpio5lowval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio5highval" value="%gpio5highval%" maxlength="10" size="10" onchange="updateStuff(this)" /></td>
+        <td align="left"><input name="gpio5lowval" value="%gpio5lowval%" maxlength="10" size="10" onchange="updateStuff(this)" /></td>
         <td align="left"><input type="checkbox" name="usePullup5" value="1" %pullup5Checked% onchange="updateStuff()" /></td>
         <td align="left">Also used as default I2C SDA (data).</td>
         </tr>
        <tr>
         <td align="left"><input type="checkbox" name="useGpio12" value="1" %gpio12Checked% onchange="updateStuff()" /></td>
         <td>&nbsp;12 (D6)</td>
-        <td align="left"><input name="gpio12highval" value="%gpio12highval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
-        <td align="left"><input name="gpio12lowval" value="%gpio12lowval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio12highval" value="%gpio12highval%" maxlength="10" size="10" onchange="updateStuff(this)" /></td>
+        <td align="left"><input name="gpio12lowval" value="%gpio12lowval%" maxlength="10" size="10" onchange="updateStuff(this)" /></td>
         <td align="left"><input type="checkbox" name="usePullup12" value="1" %pullup12Checked% onchange="updateStuff()" /></td>
         <td align="left">Also used as default SPI MISO.</td>
         </tr>
        <tr>
         <td align="left"><input type="checkbox" name="useGpio13" value="1" %gpio13Checked% onchange="updateStuff()" /></td>
         <td>&nbsp;13 (D7)</td>
-        <td align="left"><input name="gpio13highval" value="%gpio13highval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
-        <td align="left"><input name="gpio13lowval" value="%gpio13lowval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio13highval" value="%gpio13highval%" maxlength="10" size="10" onchange="updateStuff(this)" /></td>
+        <td align="left"><input name="gpio13lowval" value="%gpio13lowval%" maxlength="10" size="10" onchange="updateStuff(this)" /></td>
         <td align="left"><input type="checkbox" name="usePullup13" value="1" %pullup13Checked% onchange="updateStuff()" /></td>
         <td align="left">Also used as default SPI MOSI.</td>
         </tr>
        <tr>
         <td align="left"><input type="checkbox" name="useGpio14" value="1" %gpio14Checked% onchange="updateStuff()" /></td>
         <td>&nbsp;14 (D5)</td>
-        <td align="left"><input name="gpio14highval" value="%gpio14highval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
-        <td align="left"><input name="gpio14lowval" value="%gpio14lowval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio14highval" value="%gpio14highval%" maxlength="10" size="10" onchange="updateStuff(this)" /></td>
+        <td align="left"><input name="gpio14lowval" value="%gpio14lowval%" maxlength="10" size="10" onchange="updateStuff(this)" /></td>
         <td align="left"><input type="checkbox" name="usePullup14" value="1" %pullup14Checked% onchange="updateStuff()" /></td>
         <td align="left">Also used as default SPI SCK.</td>
         </tr>
        <tr>
         <td align="left"><input type="checkbox" name="useGpio15" value="1" %gpio15Checked% onchange="updateStuff()" /></td>
         <td>&nbsp;15 (D8)</td>
-        <td align="left"><input name="gpio15highval" value="%gpio15highval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
-        <td align="left"><input name="gpio15lowval" value="%gpio15lowval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio15highval" value="%gpio15highval%" maxlength="10" size="10" onchange="updateStuff(this)" /></td>
+        <td align="left"><input name="gpio15lowval" value="%gpio15lowval%" maxlength="10" size="10" onchange="updateStuff(this)" /></td>
         <td align="left"><input type="checkbox" name="usePullup15" value="1" %pullup15Checked% onchange="updateStuff()" /></td>
         <td align="left">Must be low when booting. Also used as default SPI CS.</td>
         </tr>
        <tr>
         <td align="left"><input type="checkbox" name="useGpio16" value="1" %gpio16Checked% onchange="updateStuff()" /></td>
         <td>&nbsp;16 (D0)</td>
-        <td align="left"><input name="gpio16highval" value="%gpio16highval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
-        <td align="left"><input name="gpio16lowval" value="%gpio16lowval%" maxlength="10" size="10" onchange="updateStuff()" /></td>
+        <td align="left"><input name="gpio16highval" value="%gpio16highval%" maxlength="10" size="10" onchange="updateStuff(this)" /></td>
+        <td align="left"><input name="gpio16lowval" value="%gpio16lowval%" maxlength="10" size="10" onchange="updateStuff(this)" /></td>
         <td align="left"><input type="checkbox" name="usePullup16" value="1" %pullup16Checked% onchange="updateStuff()" /></td>
         <td align="left">Used to wake up CPU from deep sleep when tied to the reset line.</td>
         </tr>
